@@ -210,11 +210,13 @@ function drawFighter(f){
   const targetHeight=f.type==='raika'?142:(f.type==='yurei'?138:136),scale=targetHeight/Math.max(1,base);
   const dw=b.w*scale,dh=b.h*scale;
   ctx.save();ctx.translate(f.x,FLOOR);
-  // Fighters are assigned a permanent side when recruited: Azure spawns left
-  // and Crimson spawns right. The standard sheets face right, so mirror the
-  // right-side roster to face inward. Yurei's runLeft strip already faces left.
-  // f.face remains the live opponent-facing/movement direction for combat.
-  const mirror=key==='runLeft'?false:f.team===1;
+  // Face each animation toward the actual opponent/movement direction.
+  // Raika's Martial Hero 2 sheets are authored facing LEFT; Kai and Yurei's
+  // regular sheets face RIGHT. Yurei's dedicated runLeft strip also faces LEFT.
+  // Compare the desired facing with the source sheet's native direction so
+  // every state (idle, run, attack, hurt, etc.) uses the correct orientation.
+  const nativeFacing=key==='runLeft'?-1:(f.type==='raika'?-1:1);
+  const mirror=f.face!==nativeFacing;
   ctx.scale(mirror?-1:1,1);ctx.imageSmoothingEnabled=false;
   // Trim transparent sprite-sheet padding and pin each frame's visible feet to the dojo floor.
   ctx.drawImage(img,frame*frameW+b.x,b.y,b.w,b.h,-dw/2,-dh,dw,dh);
