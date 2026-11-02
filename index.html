@@ -385,20 +385,31 @@ function drawFighter(f){
   const frameCount=Math.max(1,sheet.frames||1),frame=Math.max(0,Math.min(frameCount-1,f.frameIndex||0));
   const frameW=img.naturalWidth/frameCount,frameH=img.naturalHeight;
   const b=Array.isArray(sheet.bounds)?sheet.bounds[frame]:null;
-  const usableBounds=f.type!=='mira'&&b&&b.visible!==false&&b.w>0&&b.h>0;
+  const miraCast=f.type==='mira'&&(key==='special'||key==='specialLeft');
+  // Some Priest cast-strip cells are transparent. Never let an empty cast
+  // pose replace Mira's body: use the matching authored walk pose for that
+  // frame, while keeping the real cast frames wherever they contain pixels.
+  let renderImage=img,renderFrames=frameCount,renderFrame=frame;
+  if(miraCast&&(!img.complete||!img.naturalWidth||!img.naturalHeight||(Array.isArray(sheet.bounds)&&(!b||b.visible===false||b.w<=0||b.h<=0)))){
+   const fallback=getSprite('mira',key==='specialLeft'?'runLeft':'run');
+   if(fallback.image.complete&&fallback.image.naturalWidth>0&&fallback.image.naturalHeight>0){
+    renderImage=fallback.image;renderFrames=fallback.frames||3;renderFrame=Math.min(renderFrames-1,frame);
+   }
+  }
+  const renderFrameW=renderImage.naturalWidth/Math.max(1,renderFrames),renderFrameH=renderImage.naturalHeight;
+  const renderBounds=renderImage===img?b:(Array.isArray(getSprite('mira',key==='specialLeft'?'runLeft':'run').bounds)?getSprite('mira',key==='specialLeft'?'runLeft':'run').bounds[renderFrame]:null);
+  const usableBounds=f.type!=='mira'&&renderBounds&&renderBounds.visible!==false&&renderBounds.w>0&&renderBounds.h>0;
   const targetHeight=f.type==='goku'?164:(f.type==='raika'?142:(f.type==='yurei'?138:(f.type==='mira'?126:136)));
-  const sourceH=f.type==='mira'?frameH:(usableBounds?b.h:frameH);
+  const sourceH=f.type==='mira'?renderFrameH:(usableBounds?renderBounds.h:renderFrameH);
   const scale=targetHeight/Math.max(1,sourceH);
-  const sx=usableBounds?frame*frameW+b.x:frame*frameW,sy=usableBounds?b.y:0;
-  const sw=usableBounds?b.w:frameW,sh=usableBounds?b.h:frameH;
+  const sx=usableBounds?renderFrame*renderFrameW+renderBounds.x:renderFrame*renderFrameW,sy=usableBounds?renderBounds.y:0;
+  const sw=usableBounds?renderBounds.w:renderFrameW,sh=usableBounds?renderBounds.h:renderFrameH;
   const dw=sw*scale,dh=sh*scale;
   ctx.save();ctx.translate(f.x,FLOOR);
   // Keep each authored sheet's native facing consistent with combat direction.
   const nativeFacing=(key==='runLeft'||key==='idleLeft'||key==='specialLeft'||f.type==='raika')?-1:1;
   ctx.scale(f.face!==nativeFacing?-1:1,1);ctx.imageSmoothingEnabled=false;
-  // Mira's source cells are authored as complete 48x64 frames; all other
-  // sheets use trimmed alpha bounds when available and full cells otherwise.
-  ctx.drawImage(img,sx,sy,sw,sh,-dw/2,-dh,dw,dh);
+  ctx.drawImage(renderImage,renderFrame*renderFrameW,0,renderFrameW,renderFrameH,-dw/2,-dh,dw,dh);
   ctx.restore();
  }
  if(!f.ko){
