@@ -14,3 +14,9 @@
 - The assets are bundled in the public repository because the source packs are marked CC0 1.0 Universal. Attribution is not required by CC0, but is included here to credit the artists and document the source projects.
 
 - **Son Goku prototype fan-art sprite:** original project-authored vector fan art for this personal browser-game prototype; not an official Dragon Ball asset or an extracted MUGEN/game rip. Character likeness and trademarks belong to their respective rights holders.
+
+
+## Mira — Priest sprite pack
+- **Priest v1.1** by Svetlana Kushnariova (Cabbit) and Jordan Irwin (AntumDeluge), OpenGameArt submission https://opengameart.org/node/84542. Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0); the source pack also lists OGA BY 3.0 and CC BY 3.0. License: https://creativecommons.org/licenses/by/4.0/.
+- Mira's game sprites are modified derivatives: the original priest base and violet robe overlay are composited, east/west directional rows are cropped into side-view idle and walking strips, and subtle casting-light overlays are added. The source pack contains idle and walking animations only; casting visuals, healing projectile/impact VFX, support AI, and healing mechanics are project-authored.
+- Attribution: "Priest" by Svetlana Kushnariova (Cabbit) & Jordan Irwin (AntumDeluge), from OpenGameArt.org node 84542, modified for Idle Anime Fighters.

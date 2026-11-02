@@ -63,6 +63,8 @@ h1{letter-spacing:2px;text-shadow:0 2px 0 #050914,0 0 18px #e7b65c35}
 @media(max-width:560px){.side-tabs button{font-size:11px;padding:8px 2px}.anime-slots{grid-template-columns:1fr 1fr}.wallet{gap:7px}.wallet-stat strong{font-size:20px}.shell{padding:8px 7px 20px}.topbar{padding:7px}.side{grid-template-columns:1fr}.fighter-card{grid-template-columns:48px 1fr auto}.portrait{width:46px;height:50px}}
 .side-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}.side-tabs button{min-width:0}.settings-content{padding:14px;display:grid;gap:11px}.settings-description strong{font:800 17px "Barlow Condensed";letter-spacing:.7px;color:#f0d49b}.settings-description p{margin:5px 0 0;color:#aebbd0;font-size:12px;line-height:1.55}.reset-save{justify-self:start;border:1px solid #b65b69;border-radius:3px;padding:9px 14px;background:linear-gradient(180deg,#87394b,#4c202f);color:#ffe3e7;font:900 13px "Barlow Condensed";letter-spacing:1px;box-shadow:0 3px 0 #32131e}.reset-save:hover{filter:brightness(1.15)}.settings-warning{font-size:11px;color:#ff9aa8;line-height:1.4}.reset-confirm{padding:12px;border:1px solid #a94b5c;background:#281923;display:grid;gap:8px}.reset-confirm[hidden]{display:none}.reset-confirm strong{color:#ffb5bd;font:900 14px "Barlow Condensed";letter-spacing:1px}.reset-confirm p{margin:0;color:#d5c5ce;font-size:12px;line-height:1.45}.reset-actions{display:flex;gap:8px;flex-wrap:wrap}.reset-actions button{padding:8px 11px;border-radius:3px;font:800 12px "Barlow Condensed";letter-spacing:.6px}.reset-cancel{border:1px solid #61728c;background:#26364d;color:#e2eaf5}.reset-final{border:1px solid #c45b6a;background:#a43d50;color:white}
 
+<style>
+.fighter-card:nth-child(4){border-left:3px solid #8fffe0}
 </style></head>
 <body><main class="shell">
 <header class="topbar"><div class="brand"><div class="brand-mark">闘</div><div><h1>Idle Anime Fighters</h1><div class="eyebrow">Arcade combat · idle progression</div></div></div><div class="wallet"><div class="wallet-stat"><span class="coin">✦</span><div><strong id="coins">350</strong><small>FIGHT CREDITS</small></div></div><div class="wallet-stat"><span class="crystal">◆</span><div><strong id="crystals">100</strong><small>SUMMON CRYSTALS</small></div></div></div></header>
@@ -78,7 +80,8 @@ const SPRITE_SHEETS={
 kai:{idle:['idle.png',8],run:['run.png',8],jump:['jump.png',2],fall:['fall.png',2],attack:['attack.png',6],special:['special.png',6],hurt:['hit.png',4],death:['death.png',6]},
 raika:{idle:['idle.png',4],run:['run.png',8],jump:['jump.png',2],fall:['fall.png',2],attack:['attack.png',4],special:['special.png',4],hurt:['hit.png',3],death:['death.png',7]},
 yurei:{idle:['idle.png',8],run:['run.png',8],runLeft:['run-left.png',8],jump:['jump.png',2],fall:['fall.png',2],attack:['attack.png',5],special:['attack.png',5],hurt:['hit.png',3],death:['death.png',8]},
-goku:{idle:['goku.svg',4],run:['goku.svg',4],jump:['goku.svg',4],fall:['goku.svg',4],attack:['goku.svg',4],special:['goku.svg',4],hurt:['goku.svg',4],death:['goku.svg',4]}
+goku:{idle:['goku.svg',4],run:['goku.svg',4],jump:['goku.svg',4],fall:['goku.svg',4],attack:['goku.svg',4],special:['goku.svg',4],hurt:['goku.svg',4],death:['goku.svg',4]},
+mira:{idle:['idle-right.png',1],idleLeft:['idle-left.png',1],run:['run-right.png',3],runLeft:['run-left.png',3],special:['cast-right.png',3],specialLeft:['cast-left.png',3],hurt:['idle-right.png',1],death:['idle-right.png',1]}
 };
 const spriteCache={};
 function getSprite(type,anim){
@@ -109,23 +112,22 @@ function scanSpriteFrames(image,frames){
 }
 function animationKey(f){
  if(f.ko)return 'death';
- if(f.state==='hurt')return 'hurt';
- if(f.state==='dodge'||f.state==='retreat')return f.type==='yurei'&&f.face<0?'runLeft':'run';
- if(f.state==='block')return 'idle';
- // Huntress includes a separately authored left-running strip; use it instead of
- // mirroring the right-running frames, which makes her stride and silhouette read correctly.
- if(f.state==='walk')return f.type==='yurei'&&f.face<0?'runLeft':'run';
- if(f.state==='attack')return 'attack';
- if(f.state==='special')return 'special';
+ if(f.state==='hurt')return f.type==='mira'?(f.face<0?'idleLeft':'idle'):'hurt';
+ if(f.state==='dodge'||f.state==='retreat')return (f.type==='yurei'||f.type==='mira')&&f.face<0?'runLeft':'run';
+ if(f.state==='block')return f.type==='mira'&&f.face<0?'idleLeft':'idle';
+ // Mira and Yurei use authored left-facing strips instead of mirroring their side-view poses.
+ if(f.state==='walk')return (f.type==='yurei'||f.type==='mira')&&f.face<0?'runLeft':'run';
+ if(f.state==='attack')return f.type==='mira'?(f.face<0?'specialLeft':'special'):'attack';
+ if(f.state==='special')return f.type==='mira'&&f.face<0?'specialLeft':'special';
  if(f.state==='jump')return 'jump';
  if(f.state==='fall')return 'fall';
- return 'idle';
+ return f.type==='mira'&&f.face<0?'idleLeft':'idle';
 }
 function syncSpriteFrame(f,dt){
  const key=animationKey(f);
  if(f.animName!==key){f.animName=key;f.animClock=0;f.frameIndex=0;}
  else f.animClock+=dt;
- const sheet=getSprite(f.type,key),isLoop=key==='idle'||key==='run'||key==='runLeft',fps=key==='idle'?8:(isLoop?12:17);
+ const sheet=getSprite(f.type,key),isLoop=key==='idle'||key==='idleLeft'||key==='run'||key==='runLeft',fps=(key==='idle'||key==='idleLeft')?8:(isLoop?12:17);
  const raw=Math.floor(f.animClock*fps);
  f.frameIndex=isLoop?raw%sheet.frames:Math.min(sheet.frames-1,raw);
 }
@@ -134,6 +136,7 @@ const TYPES=[
 {id:'kai',name:'KAI REN',title:'Azure Striker',cost:100,hp:125,damage:13,speed:112,rate:1.05,palette:{hair:'#18283b',skin:'#e7b58c',top:'#247fba',trim:'#b8e8f4',pants:'#253c5a',aura:'#5bdcff'},style:'balanced'},
 {id:'raika',name:'RAIKA',title:'Crimson Brawler',cost:150,hp:155,damage:16,speed:92,rate:1.22,palette:{hair:'#4b1c24',skin:'#d99a79',top:'#b93e50',trim:'#ffc0a0',pants:'#432b3a',aura:'#ff6a75'},style:'heavy'},
 {id:'yurei',name:'YUREI',title:'Violet Phantom',cost:225,hp:105,damage:11,speed:145,rate:.82,palette:{hair:'#211c38',skin:'#e9c4a2',top:'#7655bd',trim:'#d6c4ff',pants:'#342a59',aura:'#b58aff'},style:'swift'},
+{id:'mira',name:'MIRA',title:'Wandering Priest',cost:275,hp:118,damage:0,speed:96,rate:2.8,palette:{hair:'#352348',skin:'#f1c5a2',top:'#7954a8',trim:'#e8d6ff',pants:'#49345f',aura:'#8fffe0'},style:'support'},
 {id:'goku',name:'SON GOKU',title:'Legendary Saiyan',cost:0,hp:285,damage:32,speed:126,rate:.86,palette:{hair:'#17151c',skin:'#efbd91',top:'#f07825',trim:'#ffd36a',pants:'#ed7024',aura:'#ffb84d'},style:'heavy',anime:true,rarity:5}
 ];
 const UPGRADES=[
@@ -200,6 +203,39 @@ function hurt(f,amount,dir,source){
  }
 }
 function killerName(f){return TYPES.find(t=>t.id===f.type).name}
+function lowestHealthAlly(f){
+ const candidates=fighters.filter(o=>o.team===f.team&&!o.ko&&o.hp<o.maxHp*.98&&Math.abs(o.x-f.x)<330);
+ candidates.sort((a,b)=>(a.hp/a.maxHp)-(b.hp/b.maxHp)||Math.abs(a.x-f.x)-Math.abs(b.x-f.x));
+ return candidates[0]||null;
+}
+function healAlly(target,amount){
+ if(!target||target.ko)return;
+ const restored=Math.min(target.maxHp-target.hp,Math.max(0,Math.round(amount)));
+ if(!restored)return;
+ target.hp+=restored;
+ addEffect(target.x,FLOOR-76,'#9bffe7','burst',20);
+ save();renderUI(false);
+}
+function updateMira(f,dt){
+ f.cooldown=Math.max(0,f.cooldown-dt);
+ const enemy=targetFor(f),ally=lowestHealthAlly(f);
+ if(ally&&f.cooldown<=0){
+  f.face=ally.x>=f.x?1:-1;f.state='special';f.attackTime=.62;f.cooldown=2.8;f.vx=0;
+  const dx=ally.x-f.x,dist=Math.abs(dx),travel=Math.max(.35,dist/420+.25);
+  effects.push({x:f.x+f.face*22,y:FLOOR-78,vx:(dx>=0?1:-1)*420,vy:0,life:travel,max:travel,color:'#9bffe7',kind:'healProjectile',size:11,owner:f.id,targetId:ally.id,team:f.team,amount:Math.max(18,ally.maxHp*.22)});
+  addEffect(f.x+f.face*22,FLOOR-78,'#baffed','burst',9);
+  return;
+ }
+ if(enemy){
+  f.face=enemy.x>=f.x?1:-1;
+  const frontliners=fighters.filter(o=>o.team===0&&!o.ko&&o.id!==f.id&&o.type!=='mira');
+  const frontX=frontliners.length?Math.max(...frontliners.map(o=>o.x)):f.x;
+  const desired=Math.max(90,Math.min(720,frontliners.length?frontX-112:enemy.x-190));
+  if(Math.abs(desired-f.x)>11){f.state='walk';f.vx=Math.sign(desired-f.x)*Math.min(90,stats(TYPES.find(t=>t.id==='mira')).speed*.72);f.x+=f.vx*dt;}
+  else{f.state='idle';f.vx=0;}
+ }else{f.state='idle';f.vx=0;}
+ f.x=Math.max(75,Math.min(885,f.x));
+}
 function attack(f,t,dt){
  const s=stats(TYPES.find(x=>x.id===f.type),f.team===1),type=TYPES.find(x=>x.id===f.type);
  const distance=Math.abs(t.x-f.x);faceOpponent(f,t);
@@ -256,6 +292,7 @@ if(f.state==='hurt'||f.state==='block'||f.state==='dodge'||f.state==='retreat'){
  f.x=Math.max(75,Math.min(885,f.x));syncSpriteFrame(f,dt);continue;
 }
 if(f.state==='hurt'){f.timer-=dt;if(f.timer<=0)f.state='idle';}
+if(f.type==='mira'){updateMira(f,dt);syncSpriteFrame(f,dt);continue;}
 const t=targetFor(f);
 if(!t){f.state='idle';f.vx=0;syncSpriteFrame(f,dt);continue}
 faceOpponent(f,t);
@@ -286,7 +323,7 @@ if(health<.34&&dist<205&&f.tacticalCooldown<=0&&Math.random()<.72){
 }
 f.x=Math.max(75,Math.min(885,f.x));syncSpriteFrame(f,dt);}
 resolveFighterSpacing();
-for(const e of effects){e.life-=dt;if(e.kind==='projectile'){e.x+=e.vx*dt;e.y+=e.vy*dt;let t=fighters.find(f=>!f.ko&&f.team!==e.team&&Math.abs(f.x-e.x)<26&&Math.abs((FLOOR-75)- (FLOOR-75))<40);if(t){hurt(t,e.damage,Math.sign(e.vx),fighters.find(f=>f.id===e.owner));addEffect(e.x,e.y,e.color,'burst',20);e.life=0}}else{e.x+=e.vx*dt;e.y+=e.vy*dt;e.vx*=.94;e.vy+=180*dt}}
+for(const e of effects){e.life-=dt;if(e.kind==='projectile'){e.x+=e.vx*dt;e.y+=e.vy*dt;let t=fighters.find(f=>!f.ko&&f.team!==e.team&&Math.abs(f.x-e.x)<26&&Math.abs((FLOOR-75)- (FLOOR-75))<40);if(t){hurt(t,e.damage,Math.sign(e.vx),fighters.find(f=>f.id===e.owner));addEffect(e.x,e.y,e.color,'burst',20);e.life=0}}else if(e.kind==='healProjectile'){const t=fighters.find(f=>f.id===e.targetId&&f.team===e.team&&!f.ko);if(!t){e.life=0;continue;}const dx=t.x-e.x;e.vx=(dx>=0?1:-1)*420;e.x+=e.vx*dt;e.y=FLOOR-78+Math.sin((e.max-e.life)*18)*3;if(Math.abs(dx)<25){healAlly(t,e.amount);e.life=0;}}else{e.x+=e.vx*dt;e.y+=e.vy*dt;e.vx*=.94;e.vy+=180*dt}}
 effects=effects.filter(e=>e.life>0);shake=Math.max(0,shake-dt*28);flash=Math.max(0,flash-dt);const blueAlive=fighters.some(f=>f.team===0&&!f.ko),redAlive=fighters.some(f=>f.team===1&&!f.ko);if(squadSize()&&!blueAlive){state.phase='reset';state.phaseTimer=3;state.wave=1;state.incomeStreak=0;state.incomeBoost=1;showBanner('SQUAD DOWN · INCOME BOOST RESET','#ff7184',2.8);log('<b>Azure squad wiped out.</b> Wave clear income boost reset. Regrouping…');save();}else if(squadSize()&&!redAlive){const cleared=state.wave;state.crystals+=25;state.coins+=Math.round(45*state.incomeBoost);state.incomeStreak++;state.incomeBoost=Math.min(1.8,1+state.incomeStreak*.08);state.wave++;state.phase='clear';state.phaseTimer=2.4;showBanner('WAVE '+cleared+' CLEARED · +25 CRYSTALS','#8ce8ff',2.5);log('<b>Wave '+cleared+' cleared!</b> +25 summon crystals and '+Math.round(45*state.incomeBoost)+' credits earned.');save();}if(Math.random()<.015)renderUI(false)}
 function rounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
 
@@ -332,8 +369,8 @@ function drawFighter(f){
  if(f.state==='special'&&!f.ko){ctx.save();ctx.translate(f.x,FLOOR-86);const pulse=.7+Math.sin(f.anim*23)*.18;const aura=ctx.createRadialGradient(0,0,12,0,0,60*pulse);aura.addColorStop(0,p.aura+'88');aura.addColorStop(.5,p.aura+'33');aura.addColorStop(1,p.aura+'00');ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,60*pulse,0,Math.PI*2);ctx.fill();ctx.strokeStyle=p.aura;ctx.globalAlpha=.75;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,43*pulse,f.anim*5,f.anim*5+Math.PI*1.5);ctx.stroke();ctx.restore();}
  if(img.complete&&img.naturalWidth&&sheet.bounds){
   const frame=Math.min(sheet.frames-1,f.frameIndex||0),frameW=img.width/sheet.frames,b=sheet.bounds[frame];
-  const idle=getSprite(f.type,'idle'),base=idle.bounds&&idle.bounds[0]?idle.bounds[0].h:b.h;
-  const targetHeight=f.type==='goku'?164:(f.type==='raika'?142:(f.type==='yurei'?138:136)),scale=targetHeight/Math.max(1,base);
+  const idle=getSprite(f.type,f.type==='mira'&&f.face<0?'idleLeft':'idle'),base=idle.bounds&&idle.bounds[0]?idle.bounds[0].h:b.h;
+  const targetHeight=f.type==='goku'?164:(f.type==='raika'?142:(f.type==='yurei'?138:(f.type==='mira'?126:136))),scale=targetHeight/Math.max(1,base);
   const dw=b.w*scale,dh=b.h*scale;
   ctx.save();ctx.translate(f.x,FLOOR);
   // Face each animation toward the actual opponent/movement direction.
@@ -341,7 +378,7 @@ function drawFighter(f){
   // regular sheets face RIGHT. Yurei's dedicated runLeft strip also faces LEFT.
   // Compare the desired facing with the source sheet's native direction so
   // every state (idle, run, attack, hurt, etc.) uses the correct orientation.
-  const nativeFacing=key==='runLeft'?-1:(f.type==='raika'?-1:1);
+  const nativeFacing=(key==='runLeft'||key==='idleLeft'||key==='specialLeft'||f.type==='raika')?-1:1;
   const mirror=f.face!==nativeFacing;
   ctx.scale(mirror?-1:1,1);ctx.imageSmoothingEnabled=false;
   // Trim transparent sprite-sheet padding and pin each frame's visible feet to the dojo floor.
@@ -377,13 +414,13 @@ function drawFightHUD(){
 }
 
 function draw(){ctx.save();if(shake)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);background();drawFightHUD();for(const f of fighters)drawFighter(f);
-for(const e of effects){ctx.globalAlpha=Math.max(0,e.life/e.max);if(e.kind==='projectile'){let gr=ctx.createRadialGradient(e.x,e.y,2,e.x,e.y,e.size*2.5);gr.addColorStop(0,'#fff');gr.addColorStop(.3,e.color);gr.addColorStop(1,'#0000');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(e.x,e.y,e.size*2.5,0,Math.PI*2);ctx.fill();ctx.strokeStyle=e.color;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(e.x-e.vx*.08,e.y);ctx.lineTo(e.x,e.y);ctx.stroke()}else if(e.kind==='slash'){ctx.strokeStyle=e.color;ctx.lineWidth=4;ctx.beginPath();ctx.arc(e.x,e.y,14+(1-e.life/e.max)*25,-.8,1.2);ctx.stroke()}else{ctx.fillStyle=e.color;ctx.beginPath();ctx.arc(e.x,e.y,e.size*(.4+e.life/e.max),0,Math.PI*2);ctx.fill()}}ctx.globalAlpha=1;
+for(const e of effects){ctx.globalAlpha=Math.max(0,e.life/e.max);if(e.kind==='projectile'){let gr=ctx.createRadialGradient(e.x,e.y,2,e.x,e.y,e.size*2.5);gr.addColorStop(0,'#fff');gr.addColorStop(.3,e.color);gr.addColorStop(1,'#0000');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(e.x,e.y,e.size*2.5,0,Math.PI*2);ctx.fill();ctx.strokeStyle=e.color;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(e.x-e.vx*.08,e.y);ctx.lineTo(e.x,e.y);ctx.stroke()}else if(e.kind==='healProjectile'){const r=e.size*2.3,gr=ctx.createRadialGradient(e.x,e.y,1,e.x,e.y,r);gr.addColorStop(0,'#fff');gr.addColorStop(.28,'#d9fff1');gr.addColorStop(.62,e.color);gr.addColorStop(1,'#9bffe700');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(e.x,e.y,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#e3fff5';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(e.x-r*1.8,e.y);ctx.lineTo(e.x-r*.75,e.y);ctx.moveTo(e.x+r*.75,e.y);ctx.lineTo(e.x+r*1.8,e.y);ctx.moveTo(e.x,e.y-r*1.8);ctx.lineTo(e.x,e.y-r*.75);ctx.moveTo(e.x,e.y+r*.75);ctx.lineTo(e.x,e.y+r*1.8);ctx.stroke()}else if(e.kind==='slash'){ctx.strokeStyle=e.color;ctx.lineWidth=4;ctx.beginPath();ctx.arc(e.x,e.y,14+(1-e.life/e.max)*25,-.8,1.2);ctx.stroke()}else{ctx.fillStyle=e.color;ctx.beginPath();ctx.arc(e.x,e.y,e.size*(.4+e.life/e.max),0,Math.PI*2);ctx.fill()}}ctx.globalAlpha=1;
 if(flash){ctx.fillStyle='#fff';ctx.globalAlpha=flash*3;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1}ctx.restore();if(state.bannerTimer>0){ctx.save();const a=Math.min(1,state.bannerTimer*2);ctx.globalAlpha=a;ctx.textAlign='center';ctx.font='900 27px "Barlow Condensed"';ctx.lineWidth=5;ctx.strokeStyle='#080e19';ctx.strokeText(state.bannerText,480,112);ctx.fillStyle=state.bannerColor;ctx.shadowColor=state.bannerColor;ctx.shadowBlur=18;ctx.fillText(state.bannerText,480,112);ctx.restore();}
 let blue=fighters.filter(f=>f.team===0&&!f.ko).length,red=fighters.filter(f=>f.team===1&&!f.ko).length;ctx.fillStyle='#b9c8de';ctx.font='700 12px Rajdhani';ctx.textAlign='left';ctx.fillText('AZURE  '+blue,22,28);ctx.textAlign='right';ctx.fillText('CRIMSON  '+red,938,28)}
 function restoreOwned(){for(let i=0;i<state.owned.length;i++){const type=TYPES.find(t=>t.id===state.owned[i]);if(type&&!type.anime)fighters.push(makeFighter(type,0,i));}for(const id of state.activeAnime.slice(0,5)){const type=TYPES.find(t=>t.id===id&&t.anime);if(type)fighters.push(makeFighter(type,0,state.owned.length+fighters.filter(f=>f.team===0&&f.type==='goku').length));}syncEnemySquad();}
 function renderUI(rebuild=true){$('coins').textContent=Math.floor(state.coins);$('crystals').textContent=Math.floor(state.crystals);$('fighter-count').textContent=fighters.filter(f=>!f.ko).length+' active · '+fighters.length+' total deployed';$('battle-status').textContent=!squadSize()?'Recruit a base fighter or summon an anime hero':fighters.some(f=>!f.ko&&targetFor(f))?'Azure vs. Crimson — battle in progress':'Waiting for opponents…';$('roster-total').textContent=state.owned.length+' BASE UNITS';$('anime-count').textContent=state.activeAnime.length+' / 5 EQUIPPED';$('collection-count').textContent=state.animeOwned.length+' OWNED';$('fragment-count').textContent='Saiyan fragments: '+state.fragments;
 if(!rebuild)return;
-$('shop').innerHTML=TYPES.filter(t=>!t.anime).map(t=>'<div class="fighter-card"><div class="portrait"><canvas width="80" height="86" data-portrait="'+t.id+'"></canvas></div><div class="fighter-info"><strong>'+t.name+'</strong><small>'+t.title+' · '+t.style+'</small><div class="price">✦ '+t.cost+' credits</div></div><button class="buy" data-buy="'+t.id+'" '+(state.coins<t.cost?'disabled':'')+'>RECRUIT</button></div>').join('');
+$('shop').innerHTML=TYPES.filter(t=>!t.anime).map(t=>'<div class="fighter-card"><div class="portrait"><canvas width="80" height="86" data-portrait="'+t.id+'"></canvas></div><div class="fighter-info"><strong>'+t.name+'</strong><small>'+t.title+' · '+(t.id==='mira'?'SUPPORT HEALER':t.style)+'</small><div class="price">✦ '+t.cost+' credits</div></div><button class="buy" data-buy="'+t.id+'" '+(state.coins<t.cost?'disabled':'')+'>RECRUIT</button></div>').join('');
 $('upgrades').innerHTML=UPGRADES.map(u=>{let lv=state.levels[u.id],cost=Math.round(u.base*Math.pow(1.65,lv));return '<div class="upgrade"><div><strong>'+u.name+' <span style="color:#e6c16f">Lv.'+lv+'</span></strong><small>'+u.desc+'</small></div><button data-up="'+u.id+'" '+(state.coins<cost?'disabled':'')+'>✦ '+cost+'</button></div>'}).join('');
 $('roster').innerHTML=state.owned.length?state.owned.map((id,i)=>{let t=TYPES.find(x=>x.id===id);return t?'<div class="roster-row"><span><i class="team-dot" style="background:#62d9f4"></i>'+t.name+'</span><b>#'+(i+1)+'</b></div>':''}).join(''):'<div class="empty">Recruit base fighters to build your frontline.</div>';
 $('anime-slots').innerHTML=Array.from({length:5},(_,i)=>{const id=state.activeAnime[i],t=TYPES.find(x=>x.id===id);return t?'<div class="anime-slot filled"><span class="slot-num">'+(i+1)+'</span><img class="anime-thumb" src="./assets/fighters/'+id+'/goku.svg" alt="'+t.name+'"><div><strong>'+t.name+'</strong><small>★★★★★ · Anime unit</small></div><button data-unequip="'+id+'">REMOVE</button></div>':'<div class="anime-slot"><span class="slot-num">'+(i+1)+'</span><div><strong>EMPTY SLOT</strong><small>Anime character only</small></div></div>'}).join('');
