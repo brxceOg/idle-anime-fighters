@@ -108,6 +108,8 @@ function scanSpriteFrames(image,frames){
 function animationKey(f){
  if(f.ko)return 'death';
  if(f.state==='hurt')return 'hurt';
+ if(f.state==='dodge'||f.state==='retreat')return f.type==='yurei'&&f.face<0?'runLeft':'run';
+ if(f.state==='block')return 'idle';
  // Huntress includes a separately authored left-running strip; use it instead of
  // mirroring the right-running frames, which makes her stride and silhouette read correctly.
  if(f.state==='walk')return f.type==='yurei'&&f.face<0?'runLeft':'run';
@@ -145,7 +147,7 @@ function log(msg){const d=document.createElement('div');d.innerHTML=msg;$('log')
 function enemyLevel(){return Math.max(1,state.owned.length)}
 function stats(type,enemy=false){const level=enemy?enemyLevel():0,waveScale=enemy?1+(state.wave-1)*.1:1,hpScale=enemy?(1+(level-1)*.18)*waveScale:1,damageScale=enemy?(1+(level-1)*.12)*(1+(state.wave-1)*.055):1,rateScale=enemy?(1+(level-1)*.035)*(1+(state.wave-1)*.018):1;return {hp:Math.round(type.hp*hpScale*(enemy?1:1+state.levels.vitality*.2)),damage:type.damage*damageScale*(enemy?1:1+state.levels.power*.15),speed:type.speed,rate:type.rate*(enemy?rateScale:1+state.levels.focus*.1)}}
 const ENEMY_LINEUP=['raika','kai','yurei'];
-function makeFighter(type,team,index=0){const s=stats(type,team===1);return {id:state.nextId++,type:type.id,team,enemyIndex:index,hp:s.hp,maxHp:s.hp,x:team===0?190+Math.random()*65:770-Math.random()*65,y:FLOOR,vx:0,face:team===0?1:-1,state:'idle',timer:Math.random(),cooldown:.4+Math.random(),attackTime:0,hitFlash:0,ko:false,respawn:0,anim:Math.random(),animName:'',animClock:0,frameIndex:0,energy:0,kills:0}}
+function makeFighter(type,team,index=0){const s=stats(type,team===1);return {id:state.nextId++,type:type.id,team,enemyIndex:index,hp:s.hp,maxHp:s.hp,x:team===0?190+Math.random()*65:770-Math.random()*65,y:FLOOR,vx:0,face:team===0?1:-1,state:'idle',timer:Math.random(),cooldown:.55+Math.random()*.8,attackTime:0,hitFlash:0,ko:false,respawn:0,anim:Math.random(),animName:'',animClock:0,frameIndex:0,energy:0,kills:0,defenseCooldown:.4+Math.random(),tacticalCooldown:1+Math.random()*2,retreatTimer:0,blockTimer:0,dodgeTimer:0,decisionTimer:.2+Math.random()*.5}}
 function syncEnemyDifficulty(){for(const f of fighters){if(f.team!==1)continue;const ratio=f.maxHp?f.hp/f.maxHp:1,s=stats(TYPES.find(t=>t.id===f.type),true);f.maxHp=s.hp;f.hp=f.ko?0:Math.max(1,Math.round(s.hp*ratio));}}
 function syncEnemySquad(){const wanted=state.owned.length,current=fighters.filter(f=>f.team===1).length;for(let i=current;i<wanted;i++){const type=TYPES.find(t=>t.id===ENEMY_LINEUP[i%ENEMY_LINEUP.length]);fighters.push(makeFighter(type,1,i));}syncEnemyDifficulty();}
 function spawnEnemyWave(){fighters=fighters.filter(f=>f.team===0);for(let i=0;i<state.owned.length;i++){const type=TYPES.find(t=>t.id===ENEMY_LINEUP[i%ENEMY_LINEUP.length]);fighters.push(makeFighter(type,1,i));}syncEnemyDifficulty();}
@@ -157,17 +159,99 @@ function targetFor(f){let candidates=fighters.filter(o=>o.team!==f.team&&!o.ko);
 // when sprites overlap exactly, rather than arbitrarily turning their backs.
 function faceOpponent(f,target){if(!target)return;const dx=target.x-f.x;if(Math.abs(dx)>2)f.face=dx>0?1:-1;else if(Math.abs(f.vx||0)>2)f.face=f.vx>0?1:-1;}
 function addEffect(x,y,color,kind='spark',n=8){for(let i=0;i<n;i++){let a=Math.PI*2*i/n+Math.random()*.4,s=kind==='burst'?60+Math.random()*180:30+Math.random()*110;effects.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,life:.25+Math.random()*.3,max:.55,color,kind,size:2+Math.random()*5})}}
-function hurt(f,amount,dir,source){if(f.ko)return;f.hp=Math.max(0,f.hp-amount);f.state='hurt';f.timer=.28;f.hitFlash=.14;f.x+=dir*13;f.cooldown=Math.max(f.cooldown,.25);shake=7;flash=.07;addEffect(f.x,f.y-75,'#fff1b5','burst',11);if(f.hp<=0){f.ko=true;f.state='ko';f.respawn=4.5;const killer=source||fighters.find(o=>o.team!==f.team&&!o.ko);if(killer){killer.kills++;if(killer.team===0&&f.team===1){const baseBounty=35+Math.max(0,enemyLevel()-1)*5,bounty=Math.round(baseBounty*state.incomeBoost);state.coins+=bounty;log('<b>'+killerName(killer)+'</b> defeated a Crimson fighter. <b>+'+bounty+' credits</b>');}else{log('<b>'+killerName(killer)+'</b> was knocked out.');}}save();renderUI()}}
+function hurt(f,amount,dir,source){
+ if(f.ko)return;
+ const health=f.hp/Math.max(1,f.maxHp),style=TYPES.find(t=>t.id===f.type).style;
+ // Fighters read incoming pressure and occasionally evade or guard instead of
+ // accepting every hit. Defensive actions have a shared recovery window.
+ if(source&&source.team!==f.team&&f.defenseCooldown<=0){
+  const dodgeChance=(health<.32?.34:.13)+(style==='swift'?.08:0);
+  const blockChance=style==='heavy'?.34:(style==='balanced'?.25:.18);
+  if(Math.random()<dodgeChance){
+   f.state='dodge';f.dodgeTimer=.38;f.timer=.38;f.vx=-dir*(style==='swift'?205:165);
+   f.x=Math.max(75,Math.min(885,f.x-dir*(style==='swift'?58:43)));
+   f.defenseCooldown=1.15+Math.random()*.65;f.hitFlash=0;
+   addEffect(f.x,FLOOR-72,TYPES.find(t=>t.id===f.type).palette.aura,'spark',9);
+   return;
+  }
+  if(Math.random()<blockChance){
+   amount*=.28;f.state='block';f.blockTimer=.42;f.timer=.42;f.vx=0;
+   f.defenseCooldown=.85+Math.random()*.45;f.hitFlash=.05;
+   addEffect(f.x+dir*17,FLOOR-78,'#a8e8ff','burst',7);
+  }else f.defenseCooldown=.28;
+ }
+ f.hp=Math.max(0,f.hp-amount);
+ if(f.state!=='block'){f.state='hurt';f.timer=.3;f.x+=dir*13;}
+ f.cooldown=Math.max(f.cooldown,.3);shake=5;flash=.035;
+ addEffect(f.x,FLOOR-75,f.state==='block'?'#a8e8ff':'#fff1b5',f.state==='block'?'spark':'burst',f.state==='block'?6:10);
+ if(f.hp<=0){
+  f.ko=true;f.state='ko';f.respawn=4.5;
+  const killer=source||fighters.find(o=>o.team!==f.team&&!o.ko);
+  if(killer){killer.kills++;if(killer.team===0&&f.team===1){const baseBounty=35+Math.max(0,enemyLevel()-1)*5,bounty=Math.round(baseBounty*state.incomeBoost);state.coins+=bounty;log('<b>'+killerName(killer)+'</b> defeated a Crimson fighter. <b>+'+bounty+' credits</b>');}else{log('<b>'+killerName(killer)+'</b> was knocked out.');}}
+  save();renderUI();
+ }
+}
 function killerName(f){return TYPES.find(t=>t.id===f.type).name}
-function attack(f,t,dt){const s=stats(TYPES.find(x=>x.id===f.type),f.team===1);let distance=Math.abs(t.x-f.x);faceOpponent(f,t);f.cooldown-=dt;f.energy=Math.min(100,f.energy+dt*5);
-if(f.cooldown<=0&&distance<104&&f.energy<65){f.state='attack';f.attackTime=SPRITE_SHEETS[f.type].attack[1]/14;f.cooldown=1/s.rate;f.x+=f.face*17;const dmg=s.damage*(.85+Math.random()*.3);if(Math.random()<.13){addEffect((f.x+t.x)/2,FLOOR-80,'#f9d17b','burst',16);hurt(t,dmg*1.8,f.face,f);log('<b>'+killerName(f)+'</b> landed a critical strike!')}else{addEffect((f.x+t.x)/2,FLOOR-75,f.team?'#ff7184':'#68dcff','slash',8);hurt(t,dmg,f.face)}}
-else if(f.cooldown<=0&&distance<290&&f.energy>=65){f.state='special';f.attackTime=SPRITE_SHEETS[f.type].special[1]/13;f.cooldown=2.3/s.rate;f.energy-=65;effects.push({x:f.x+f.face*30,y:FLOOR-75,vx:f.face*410,vy:0,life:.7,max:.7,color:TYPES.find(x=>x.id===f.type).palette.aura,kind:'projectile',size:13,owner:f.id,team:f.team,damage:s.damage*2.35});addEffect(f.x+f.face*20,FLOOR-75,TYPES.find(x=>x.id===f.type).palette.aura,'burst',12);log('<b>'+killerName(f)+'</b> unleashed an energy strike!')}
+function attack(f,t,dt){
+ const s=stats(TYPES.find(x=>x.id===f.type),f.team===1),type=TYPES.find(x=>x.id===f.type);
+ const distance=Math.abs(t.x-f.x);faceOpponent(f,t);
+ f.cooldown-=dt;f.energy=Math.min(100,f.energy+dt*(f.type==='yurei'?7:5.5));
+ if(f.cooldown>0)return;
+ const preferred=f.styleRange||(type.style==='heavy'?88:type.style==='swift'?112:100);
+ if(distance<preferred+18&&distance>54&&f.energy<65){
+  f.state='attack';f.attackTime=SPRITE_SHEETS[f.type].attack[1]/14+.12;
+  f.cooldown=(1/s.rate)*(type.style==='heavy'?1.12:1);
+  // Small lunge creates commitment and a punishable recovery window.
+  f.x+=f.face*(type.style==='swift'?13:19);
+  const dmg=s.damage*(.78+Math.random()*.28);
+  if(Math.random()<.1){addEffect((f.x+t.x)/2,FLOOR-80,'#f9d17b','burst',14);hurt(t,dmg*1.65,f.face,f);log('<b>'+killerName(f)+'</b> landed a critical strike!');}
+  else{addEffect((f.x+t.x)/2,FLOOR-75,f.team?'#ff7184':'#68dcff','slash',8);hurt(t,dmg,f.face,f);}
+ }else if(distance<330&&f.energy>=65){
+  f.state='special';f.attackTime=SPRITE_SHEETS[f.type].special[1]/13+.16;
+  f.cooldown=2.6/s.rate;f.energy-=65;
+  effects.push({x:f.x+f.face*30,y:FLOOR-75,vx:f.face*410,vy:0,life:.7,max:.7,color:type.palette.aura,kind:'projectile',size:13,owner:f.id,team:f.team,damage:s.damage*2.1});
+  addEffect(f.x+f.face*20,FLOOR-75,type.palette.aura,'burst',12);
+  log('<b>'+killerName(f)+'</b> unleashed an energy strike!');
+ }
 }
 function update(dt){if(state.paused)return;dt*=state.speed;if(state.bannerTimer>0)state.bannerTimer=Math.max(0,state.bannerTimer-dt);if(state.phase!=='battle'){state.phaseTimer-=dt;if(state.phaseTimer<=0){if(state.phase==='clear'){spawnEnemyWave();state.phase='battle';log('<b>Wave '+state.wave+'</b> begins. Income boost is now '+Math.round((state.incomeBoost-1)*100)+'%.');}else if(state.phase==='reset'){reviveAzureSquad();spawnEnemyWave();state.phase='battle';log('Azure squad is back in the fight.');}save();renderUI();}return;}for(const f of fighters){if(f.ko){f.respawn-=dt;syncSpriteFrame(f,dt);continue}
-f.anim+=dt;f.hitFlash=Math.max(0,f.hitFlash-dt);f.attackTime=Math.max(0,f.attackTime-dt);if(f.attackTime<=0&&(f.state==='attack'||f.state==='special'))f.state='idle';if(f.state==='hurt'){f.timer-=dt;if(f.timer<=0)f.state='idle';}
-const t=targetFor(f);if(!t){f.state='idle';f.vx=0;syncSpriteFrame(f,dt);continue}faceOpponent(f,t);const dist=Math.abs(t.x-f.x);
-if(f.state==='hurt'||f.state==='attack'||f.state==='special'){syncSpriteFrame(f,dt);continue}
-if(dist>180||(dist>104&&f.energy<65)){f.state='walk';let pace=stats(TYPES.find(x=>x.id===f.type)).speed;f.vx=f.face*pace;f.x+=f.vx*dt}else{f.vx=0;f.state='idle';attack(f,t,dt)}
+f.anim+=dt;f.hitFlash=Math.max(0,f.hitFlash-dt);f.attackTime=Math.max(0,f.attackTime-dt);if(f.attackTime<=0&&(f.state==='attack'||f.state==='special'))f.state='idle';f.defenseCooldown=Math.max(0,f.defenseCooldown-dt);
+f.tacticalCooldown=Math.max(0,f.tacticalCooldown-dt);
+if(f.state==='hurt'||f.state==='block'||f.state==='dodge'||f.state==='retreat'){
+ f.timer-=dt;
+ if(f.state==='dodge'){f.x+=f.vx*dt;f.vx*=Math.max(0,1-dt*5);}
+ else if(f.state==='retreat'){f.x+=f.vx*dt;f.vx*=Math.max(0,1-dt*3);}
+ if(f.timer<=0){f.state='idle';f.vx=0;}
+ f.x=Math.max(75,Math.min(885,f.x));syncSpriteFrame(f,dt);continue;
+}
+if(f.state==='hurt'){f.timer-=dt;if(f.timer<=0)f.state='idle';}
+const t=targetFor(f);
+if(!t){f.state='idle';f.vx=0;syncSpriteFrame(f,dt);continue}
+faceOpponent(f,t);
+const dist=Math.abs(t.x-f.x),health=f.hp/Math.max(1,f.maxHp);
+const type=TYPES.find(x=>x.id===f.type),pace=stats(type,f.team===1).speed;
+// A fighter under pressure will break contact, then circle back in rather than
+// standing still and trading blows until one side drops.
+if(health<.34&&dist<205&&f.tacticalCooldown<=0&&Math.random()<.72){
+ f.state='retreat';f.timer=.65+Math.random()*.45;f.vx=-f.face*pace*(type.style==='swift'?1.45:1.2);
+ f.tacticalCooldown=2.1+Math.random()*1.3;
+}else if(f.state==='attack'||f.state==='special'){
+ // Keep the full attack animation and recovery; do not cancel it to chase.
+}else{
+ const ideal=type.style==='heavy'?88:(type.style==='swift'?112:100);
+ if(dist>ideal+48){
+  f.state='walk';f.vx=f.face*pace*(dist>260?1.05:.78);f.x+=f.vx*dt;
+ }else if(dist<58){
+  // Make a little room instead of overlapping opponents.
+  f.state='walk';f.vx=-f.face*pace*.58;f.x+=f.vx*dt;
+ }else{
+  f.vx=0;f.state='idle';
+  // Fighters pause, watch, and choose their moment to strike.
+  f.decisionTimer-=dt;
+  if(f.decisionTimer<=0){attack(f,t,dt);f.decisionTimer=.12+Math.random()*.24;}
+  else{f.cooldown=Math.max(0,f.cooldown-dt*.22);f.energy=Math.min(100,f.energy+dt*2.2);}
+ }
+}
 f.x=Math.max(75,Math.min(885,f.x));syncSpriteFrame(f,dt);}
 for(const e of effects){e.life-=dt;if(e.kind==='projectile'){e.x+=e.vx*dt;e.y+=e.vy*dt;let t=fighters.find(f=>!f.ko&&f.team!==e.team&&Math.abs(f.x-e.x)<26&&Math.abs((FLOOR-75)- (FLOOR-75))<40);if(t){hurt(t,e.damage,Math.sign(e.vx),fighters.find(f=>f.id===e.owner));addEffect(e.x,e.y,e.color,'burst',20);e.life=0}}else{e.x+=e.vx*dt;e.y+=e.vy*dt;e.vx*=.94;e.vy+=180*dt}}
 effects=effects.filter(e=>e.life>0);shake=Math.max(0,shake-dt*28);flash=Math.max(0,flash-dt);const blueAlive=fighters.some(f=>f.team===0&&!f.ko),redAlive=fighters.some(f=>f.team===1&&!f.ko);if(state.owned.length&&!blueAlive){state.phase='reset';state.phaseTimer=3;state.wave=1;state.incomeStreak=0;state.incomeBoost=1;showBanner('SQUAD DOWN · INCOME BOOST RESET','#ff7184',2.8);log('<b>Azure squad wiped out.</b> Wave clear income boost reset. Regrouping…');save();}else if(state.owned.length&&!redAlive){const cleared=state.wave;state.incomeStreak++;state.incomeBoost=Math.min(1.8,1+state.incomeStreak*.08);state.wave++;state.phase='clear';state.phaseTimer=2.4;showBanner('WAVE '+cleared+' CLEARED · INCOME +'+Math.round((state.incomeBoost-1)*100)+'%','#8ce8ff',2.5);log('<b>Wave '+cleared+' cleared!</b> Income boost increased to '+Math.round((state.incomeBoost-1)*100)+'%.');save();}if(Math.random()<.015)renderUI(false)}
