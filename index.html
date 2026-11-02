@@ -89,7 +89,14 @@ function getSprite(type,anim){
  const def=SPRITE_SHEETS[type][anim]||SPRITE_SHEETS[type].idle,key=type+':'+anim;
  if(!spriteCache[key]){
   const image=new Image(),sheet={image,frames:def[1],bounds:null};
-  image.onload=()=>{sheet.bounds=scanSpriteFrames(image,sheet.frames);const t=TYPES.find(x=>x.id===type);document.querySelectorAll('[data-portrait="'+type+'"]').forEach(c=>drawPortrait(c.getContext('2d'),t));};
+  image.onload=()=>{
+   // Alpha-bound scanning is an optional optimization, never a requirement for
+   // rendering. Some browser/image combinations can reject getImageData().
+   try{sheet.bounds=scanSpriteFrames(image,sheet.frames);}catch(error){sheet.bounds=null;console.warn('Sprite bounds scan failed; using full frame cells:',type,anim,error);}
+   const t=TYPES.find(x=>x.id===type);
+   document.querySelectorAll('[data-portrait="'+type+'"]').forEach(c=>drawPortrait(c.getContext('2d'),t));
+  };
+  image.onerror=()=>{sheet.loadError=true;console.error('Fighter sprite failed to load:',type,anim,image.src);};
   image.src='./assets/fighters/'+type+'/'+def[0];spriteCache[key]=sheet;
  }
  return spriteCache[key];
@@ -375,27 +382,24 @@ function drawFighter(f){
  ctx.save();ctx.globalAlpha=.34;ctx.fillStyle='#050914';ctx.beginPath();ctx.ellipse(f.x,FLOOR+1,f.type==='raika'?38:32,8,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
  if(f.state==='block'&&!f.ko){ctx.save();ctx.strokeStyle='#a8e8ff';ctx.globalAlpha=.8;ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.x+f.face*18,FLOOR-82,27,-1.15,1.15);ctx.stroke();ctx.globalAlpha=.22;ctx.fillStyle='#a8e8ff';ctx.beginPath();ctx.arc(f.x+f.face*18,FLOOR-82,25,-1.15,1.15);ctx.fill();ctx.restore();}
  if(f.state==='special'&&!f.ko){ctx.save();ctx.translate(f.x,FLOOR-86);const pulse=.7+Math.sin(f.anim*23)*.18;const aura=ctx.createRadialGradient(0,0,12,0,0,60*pulse);aura.addColorStop(0,p.aura+'88');aura.addColorStop(.5,p.aura+'33');aura.addColorStop(1,p.aura+'00');ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,60*pulse,0,Math.PI*2);ctx.fill();ctx.strokeStyle=p.aura;ctx.globalAlpha=.75;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,43*pulse,f.anim*5,f.anim*5+Math.PI*1.5);ctx.stroke();ctx.restore();}
- if(img.complete&&img.naturalWidth&&sheet.bounds){
-  const frame=Math.min(sheet.frames-1,f.frameIndex||0),frameW=img.width/sheet.frames,b=sheet.bounds&&sheet.bounds[frame];
-  const idle=getSprite(f.type,f.type==='mira'&&f.face<0?'idleLeft':'idle'),base=idle.bounds&&idle.bounds[0]?idle.bounds[0].h:b.h;
-  const targetHeight=f.type==='goku'?164:(f.type==='raika'?142:(f.type==='yurei'?138:(f.type==='mira'?126:136))),scale=targetHeight/Math.max(1,base);
-  const dw=b.w*scale,dh=b.h*scale;
+ if(img.complete&&img.naturalWidth>0&&img.naturalHeight>0){
+  const frameCount=Math.max(1,sheet.frames||1),frame=Math.max(0,Math.min(frameCount-1,f.frameIndex||0));
+  const frameW=img.naturalWidth/frameCount,frameH=img.naturalHeight;
+  const b=Array.isArray(sheet.bounds)?sheet.bounds[frame]:null;
+  const usableBounds=b&&b.visible!==false&&b.w>0&&b.h>0;
+  const targetHeight=f.type==='goku'?164:(f.type==='raika'?142:(f.type==='yurei'?138:(f.type==='mira'?126:136)));
+  const sourceH=f.type==='mira'?frameH:(usableBounds?b.h:frameH);
+  const scale=targetHeight/Math.max(1,sourceH);
+  const sx=usableBounds?frame*frameW+b.x:frame*frameW,sy=usableBounds?b.y:0;
+  const sw=usableBounds?b.w:frameW,sh=usableBounds?b.h:frameH;
+  const dw=sw*scale,dh=sh*scale;
   ctx.save();ctx.translate(f.x,FLOOR);
-  // Face each animation toward the actual opponent/movement direction.
-  // Raika's Martial Hero 2 sheets are authored facing LEFT; Kai and Yurei's
-  // regular sheets face RIGHT. Yurei's dedicated runLeft strip also faces LEFT.
-  // Compare the desired facing with the source sheet's native direction so
-  // every state (idle, run, attack, hurt, etc.) uses the correct orientation.
+  // Keep each authored sheet's native facing consistent with combat direction.
   const nativeFacing=(key==='runLeft'||key==='idleLeft'||key==='specialLeft'||f.type==='raika')?-1:1;
-  const mirror=f.face!==nativeFacing;
-  ctx.scale(mirror?-1:1,1);ctx.imageSmoothingEnabled=false;
-  // Trim transparent sprite-sheet padding and pin each frame's visible feet to the dojo floor.
-  if(f.type==='mira'){
-   // Draw the complete authored 48x64 cell. Frame selection rejects tiny
-   // stray-alpha cells, so no frame can crop Mira down to a speck.
-   const miraScale=targetHeight/64,miraW=frameW*miraScale,miraH=img.height*miraScale;
-   ctx.drawImage(img,frame*frameW,0,frameW,img.height,-miraW/2,-miraH,miraW,miraH);
-  }else ctx.drawImage(img,frame*frameW+b.x,b.y,b.w,b.h,-dw/2,-dh,dw,dh);
+  ctx.scale(f.face!==nativeFacing?-1:1,1);ctx.imageSmoothingEnabled=false;
+  // Mira's source cells are authored as complete 48x64 frames; all other
+  // sheets use trimmed alpha bounds when available and full cells otherwise.
+  ctx.drawImage(img,sx,sy,sw,sh,-dw/2,-dh,dw,dh);
   ctx.restore();
  }
  if(!f.ko){
@@ -448,18 +452,17 @@ document.querySelectorAll('[data-portrait]').forEach(c=>{let t=TYPES.find(x=>x.i
 }
 
 function drawPortrait(g,t){
- if(!g||!t)return;g.clearRect(0,0,80,86);g.imageSmoothingEnabled=false;
- const s=getSprite(t.id,'idle'),img=s.image;if(!img.complete||!img.naturalWidth)return;
- if(t.id==='mira'){
-  // Mira's portrait uses the full authored 48x64 idle cell directly. It does
-  // not depend on the per-frame alpha scanner used by the other sprite packs.
-  const scale=76/64,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
-  g.drawImage(img,0,0,img.naturalWidth,img.naturalHeight,(80-w)/2,84-h,w,h);
-  return;
- }
- if(!s.bounds)return;
- const b=s.bounds[0],scale=76/Math.max(1,b.h),dw=b.w*scale,dh=b.h*scale;
- g.drawImage(img,b.x,b.y,b.w,b.h,(80-dw)/2,84-dh,dw,dh);
+ if(!g||!t)return;
+ g.clearRect(0,0,80,86);g.imageSmoothingEnabled=false;
+ const s=getSprite(t.id,'idle'),img=s.image;
+ if(!img.complete||!img.naturalWidth||!img.naturalHeight)return;
+ const frameW=img.naturalWidth/Math.max(1,s.frames||1),b=Array.isArray(s.bounds)?s.bounds[0]:null;
+ const useBounds=t.id!=='mira'&&b&&b.visible!==false&&b.w>0&&b.h>0;
+ const sx=useBounds?b.x:0,sy=useBounds?b.y:0,sw=useBounds?b.w:frameW,sh=useBounds?b.h:img.naturalHeight;
+ const scale=76/Math.max(1,sh),dw=sw*scale,dh=sh*scale;
+ // Mira's icon deliberately uses her complete authored idle cell; other
+ // portraits use alpha trimming when available and safely fall back to a cell.
+ g.drawImage(img,sx,sy,sw,sh,(80-dw)/2,84-dh,dw,dh);
 }
 
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===b.dataset.tab));}));
@@ -469,7 +472,12 @@ $('speed').addEventListener('click',()=>{state.speed=state.speed===1?2:state.spe
 $('reset-save').addEventListener('click',()=>{$('reset-confirm').hidden=false;$('reset-save').hidden=true});
 $('reset-cancel').addEventListener('click',()=>{$('reset-confirm').hidden=true;$('reset-save').hidden=false});
 $('reset-final').addEventListener('click',()=>{try{localStorage.removeItem('iaf-save')}catch{}state.coins=350;state.crystals=100;state.owned=[];state.animeOwned=[];state.activeAnime=[];state.fragments=0;state.levels={power:0,vitality:0,focus:0};state.nextId=1;state.round=1;state.wave=1;state.incomeStreak=0;state.incomeBoost=1;state.paused=false;state.speed=1;state.phase='battle';state.phaseTimer=0;survivalIncomeCarry=0;fighters=[];effects=[];spawnEnemyWave();save();renderUI();$('reset-confirm').hidden=true;$('reset-save').hidden=false;log('<b>Save reset.</b> Your new game has started.');});
-function loop(now){let dt=Math.min(.05,(now-last)/1000);last=now;if(!state.paused)update(dt);draw();requestAnimationFrame(loop)}
+function loop(now){
+ let dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
+ try{if(!state.paused)update(dt);}catch(error){console.error('Combat update error; continuing arena loop:',error);}
+ try{draw();}catch(error){console.error('Arena draw error; continuing animation loop:',error);}
+ requestAnimationFrame(loop);
+}
 for(const t of TYPES)for(const a of Object.keys(SPRITE_SHEETS[t.id]))getSprite(t.id,a);restoreOwned();renderUI();requestAnimationFrame(loop);
 })();
 </script></body></html>
