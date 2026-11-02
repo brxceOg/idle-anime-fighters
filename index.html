@@ -210,9 +210,9 @@ function drawFighter(f){
   const targetHeight=f.type==='raika'?142:(f.type==='yurei'?138:136),scale=targetHeight/Math.max(1,base);
   const dw=b.w*scale,dh=b.h*scale;
   ctx.save();ctx.translate(f.x,FLOOR);
-  // run-left is already authored facing left; all other strips use the right-facing
-  // source orientation and are mirrored only when the opponent is to the left.
-  const mirror=f.face<0&&!(f.type==='yurei'&&key==='runLeft');
+  // The base fighter sheets are authored facing left. Mirror them when a fighter
+  // needs to face right; Yurei's dedicated runLeft strip is also left-facing.
+  const mirror=f.face>0;
   ctx.scale(mirror?-1:1,1);ctx.imageSmoothingEnabled=false;
   // Trim transparent sprite-sheet padding and pin each frame's visible feet to the dojo floor.
   ctx.drawImage(img,frame*frameW+b.x,b.y,b.w,b.h,-dw/2,-dh,dw,dh);
