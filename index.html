@@ -65,7 +65,7 @@ h1{letter-spacing:2px;text-shadow:0 2px 0 #050914,0 0 18px #e7b65c35}
 
 <style>
 .fighter-card:nth-child(4){border-left:3px solid #8fffe0}
-</style></head>
+</style>\n<style>.portrait .mira-shop-sprite{display:block;width:42px;height:56px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 2px 3px #0009)}</style>\n</head>
 <body><main class="shell">
 <header class="topbar"><div class="brand"><div class="brand-mark">闘</div><div><h1>Idle Anime Fighters</h1><div class="eyebrow">Arcade combat · idle progression</div></div></div><div class="wallet"><div class="wallet-stat"><span class="coin">✦</span><div><strong id="coins">350</strong><small>FIGHT CREDITS</small></div></div><div class="wallet-stat"><span class="crystal">◆</span><div><strong id="crystals">100</strong><small>SUMMON CRYSTALS</small></div></div></div></header>
 <div class="layout"><div class="arena-column"><section class="arena-card"><div class="arena-head"><div class="arena-label">THE IRON DOJO <span style="color:#8495af;font-weight:500"> / STAGE 01</span></div><div class="live">LIVE COMBAT</div></div><canvas id="arena" width="960" height="500" aria-label="Animated fighting arena"></canvas><div class="arena-footer"><span><b id="battle-status">Waiting for fighters…</b> <span id="fighter-count">0 fighters deployed</span></span><div class="arena-actions"><button class="mini-btn" id="pause">Ⅱ Pause</button><button class="mini-btn" id="speed">1× Speed</button></div></div></section><section class="panel feed-panel"><div class="panel-head"><h2>Combat feed</h2><span>RECENT</span></div><div class="log" id="log"><div>Welcome to the Iron Dojo. Recruit your first fighter to challenge the Crimson squad.</div></div></section></div>
@@ -383,7 +383,13 @@ function drawFighter(f){
   const mirror=f.face!==nativeFacing;
   ctx.scale(mirror?-1:1,1);ctx.imageSmoothingEnabled=false;
   // Trim transparent sprite-sheet padding and pin each frame's visible feet to the dojo floor.
-  ctx.drawImage(img,frame*frameW+b.x,b.y,b.w,b.h,-dw/2,-dh,dw,dh);
+  if(f.type==='mira'){
+   // Mira's three-frame walk/cast strips use a fixed 48x64 cell. Draw the
+   // whole cell at one stable scale so transparent margins never cause a
+   // frame to collapse, jump in size, or appear to vanish between steps.
+   const cellH=img.height,cellScale=targetHeight/64,cellW=frameW*cellScale;
+   ctx.drawImage(img,frame*frameW,0,frameW,cellH,-cellW/2,-cellH*cellScale,cellW,cellH*cellScale);
+  }else ctx.drawImage(img,frame*frameW+b.x,b.y,b.w,b.h,-dw/2,-dh,dw,dh);
   ctx.restore();
  }
  if(!f.ko){
@@ -421,7 +427,7 @@ let blue=fighters.filter(f=>f.team===0&&!f.ko).length,red=fighters.filter(f=>f.t
 function restoreOwned(){for(let i=0;i<state.owned.length;i++){const type=TYPES.find(t=>t.id===state.owned[i]);if(type&&!type.anime)fighters.push(makeFighter(type,0,i));}for(const id of state.activeAnime.slice(0,5)){const type=TYPES.find(t=>t.id===id&&t.anime);if(type)fighters.push(makeFighter(type,0,state.owned.length+fighters.filter(f=>f.team===0&&f.type==='goku').length));}syncEnemySquad();}
 function renderUI(rebuild=true){$('coins').textContent=Math.floor(state.coins);$('crystals').textContent=Math.floor(state.crystals);$('fighter-count').textContent=fighters.filter(f=>!f.ko).length+' active · '+fighters.length+' total deployed';$('battle-status').textContent=!squadSize()?'Recruit a base fighter or summon an anime hero':fighters.some(f=>!f.ko&&targetFor(f))?'Azure vs. Crimson — battle in progress':'Waiting for opponents…';$('roster-total').textContent=state.owned.length+' BASE UNITS';$('anime-count').textContent=state.activeAnime.length+' / 5 EQUIPPED';$('collection-count').textContent=state.animeOwned.length+' OWNED';$('fragment-count').textContent='Saiyan fragments: '+state.fragments;
 if(!rebuild)return;
-$('shop').innerHTML=TYPES.filter(t=>!t.anime).map(t=>'<div class="fighter-card"><div class="portrait"><canvas width="80" height="86" data-portrait="'+t.id+'"></canvas></div><div class="fighter-info"><strong>'+t.name+'</strong><small>'+t.title+' · '+(t.id==='mira'?'SUPPORT HEALER':t.style)+'</small><div class="price">✦ '+t.cost+' credits</div></div><button class="buy" data-buy="'+t.id+'" '+(state.coins<t.cost?'disabled':'')+'>RECRUIT</button></div>').join('');
+$('shop').innerHTML=TYPES.filter(t=>!t.anime).map(t=>'<div class="fighter-card"><div class="portrait">'+(t.id==='mira'?'<img class="mira-shop-sprite" src="./assets/fighters/mira/idle-right.png" alt="Mira">':'<canvas width="80" height="86" data-portrait="'+t.id+'"></canvas>')+'</div><div class="fighter-info"><strong>'+t.name+'</strong><small>'+t.title+' · '+(t.id==='mira'?'SUPPORT HEALER':t.style)+'</small><div class="price">✦ '+t.cost+' credits</div></div><button class="buy" data-buy="'+t.id+'" '+(state.coins<t.cost?'disabled':'')+'>RECRUIT</button></div>').join('');
 $('upgrades').innerHTML=UPGRADES.map(u=>{let lv=state.levels[u.id],cost=Math.round(u.base*Math.pow(1.65,lv));return '<div class="upgrade"><div><strong>'+u.name+' <span style="color:#e6c16f">Lv.'+lv+'</span></strong><small>'+u.desc+'</small></div><button data-up="'+u.id+'" '+(state.coins<cost?'disabled':'')+'>✦ '+cost+'</button></div>'}).join('');
 $('roster').innerHTML=state.owned.length?state.owned.map((id,i)=>{let t=TYPES.find(x=>x.id===id);return t?'<div class="roster-row"><span><i class="team-dot" style="background:#62d9f4"></i>'+t.name+'</span><b>#'+(i+1)+'</b></div>':''}).join(''):'<div class="empty">Recruit base fighters to build your frontline.</div>';
 $('anime-slots').innerHTML=Array.from({length:5},(_,i)=>{const id=state.activeAnime[i],t=TYPES.find(x=>x.id===id);return t?'<div class="anime-slot filled"><span class="slot-num">'+(i+1)+'</span><img class="anime-thumb" src="./assets/fighters/'+id+'/goku.svg" alt="'+t.name+'"><div><strong>'+t.name+'</strong><small>★★★★★ · Anime unit</small></div><button data-unequip="'+id+'">REMOVE</button></div>':'<div class="anime-slot"><span class="slot-num">'+(i+1)+'</span><div><strong>EMPTY SLOT</strong><small>Anime character only</small></div></div>'}).join('');
