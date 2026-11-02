@@ -381,7 +381,7 @@ function drawFighter(f){
  ctx.save();ctx.globalAlpha=.34;ctx.fillStyle='#050914';ctx.beginPath();ctx.ellipse(f.x,FLOOR+1,f.type==='raika'?38:32,8,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
  if(f.state==='block'&&!f.ko){ctx.save();ctx.strokeStyle='#a8e8ff';ctx.globalAlpha=.8;ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.x+f.face*18,FLOOR-82,27,-1.15,1.15);ctx.stroke();ctx.globalAlpha=.22;ctx.fillStyle='#a8e8ff';ctx.beginPath();ctx.arc(f.x+f.face*18,FLOOR-82,25,-1.15,1.15);ctx.fill();ctx.restore();}
  if(f.state==='special'&&!f.ko){ctx.save();ctx.translate(f.x,FLOOR-86);const pulse=.7+Math.sin(f.anim*23)*.18;const aura=ctx.createRadialGradient(0,0,12,0,0,60*pulse);aura.addColorStop(0,p.aura+'88');aura.addColorStop(.5,p.aura+'33');aura.addColorStop(1,p.aura+'00');ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,60*pulse,0,Math.PI*2);ctx.fill();ctx.strokeStyle=p.aura;ctx.globalAlpha=.75;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,43*pulse,f.anim*5,f.anim*5+Math.PI*1.5);ctx.stroke();ctx.restore();}
- if(img.complete&&img.naturalWidth>0&&img.naturalHeight>0){
+ if((img.complete&&img.naturalWidth>0&&img.naturalHeight>0)||(f.type==='mira'&&(key==='special'||key==='specialLeft'))){
   const frameCount=Math.max(1,sheet.frames||1),frame=Math.max(0,Math.min(frameCount-1,f.frameIndex||0));
   const frameW=img.naturalWidth/frameCount,frameH=img.naturalHeight;
   const b=Array.isArray(sheet.bounds)?sheet.bounds[frame]:null;
