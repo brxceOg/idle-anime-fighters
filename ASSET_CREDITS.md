@@ -12,3 +12,5 @@
 ## Asset notes
 - The current fighter art uses CC0 sprite packs, not extracted commercial anime/game character rips or native MUGEN SFF archives.
 - The assets are bundled in the public repository because the source packs are marked CC0 1.0 Universal. Attribution is not required by CC0, but is included here to credit the artists and document the source projects.
+
+- **Son Goku prototype fan-art sprite:** original project-authored vector fan art for this personal browser-game prototype; not an official Dragon Ball asset or an extracted MUGEN/game rip. Character likeness and trademarks belong to their respective rights holders.
