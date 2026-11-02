@@ -3,7 +3,7 @@
  <linearGradient id="orange" x2="0" y2="1"><stop stop-color="#ff9b36"/><stop offset="1" stop-color="#d94b16"/></linearGradient>
  <linearGradient id="skin" x2="0" y2="1"><stop stop-color="#ffe0b5"/><stop offset="1" stop-color="#c9845c"/></linearGradient>
 </defs>
-<g id="goku" stroke="#241a20" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+<g id="goku" transform="translate(-3 0) scale(.88)" stroke="#241a20" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
 <!-- boots and legs -->
 <path d="M43 119 L39 143 Q48 151 67 146 L78 128 L71 116Z" fill="#254b9b"/><path d="M76 118 L82 142 Q94 151 110 143 L105 119Z" fill="#254b9b"/>
 <path d="M36 140 Q52 135 70 144 L68 153 L34 153 Q28 148 36 140Z" fill="#26335c"/><path d="M83 139 Q99 134 116 140 L123 151 L88 153Z" fill="#26335c"/>
