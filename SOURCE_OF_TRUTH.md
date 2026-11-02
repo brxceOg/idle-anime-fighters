@@ -44,11 +44,8 @@ A browser-based incremental anime fighting game. The arena is the centerpiece: p
 - Keep the arena visible at common desktop and phone aspect ratios.
 - Avoid excessive UI clutter and avoid tiny text.
 
-## Art and IP policy
-- Target the visual language of classic MUGEN fighting games: hand-authored 2D character sprites, crisp silhouettes, expressive poses, frame-based animation, bold hit effects, dramatic special moves, and stage depth.
-- Create original fighters, stages, effects, and UI. Do not extract or redistribute copyrighted sprites, character art, music, or other assets from commercial games or fan projects unless the user supplies assets they have rights to use or the assets are explicitly licensed for this use.
-- Dragon Ball-like energy, martial-arts spectacle, and shonen intensity may inform the broad genre feel, but characters and designs must be original rather than copied.
-- See `ART_SOURCE.md` for detailed asset requirements.
+## Prototype asset policy
+For private concept evaluation, the project may temporarily incorporate MUGEN character sprites and community fighting-game packs selected by the user, or assets that are available under terms permitting the intended use. Keep author, source, and license details in `ASSET_CREDITS.md`. A public GitHub repository is visible to others, so do not commit third-party packs whose terms do not permit redistribution; the user's personal-use intent does not itself change those terms. The prototype can use distinct original art while preferred MUGEN packs are selected.
 
 ## Initial milestone
-A complete playable vertical slice with an arena, at least two original fighters, actual sprite animations, automatic combat, health bars, hit reactions, special attacks, currency rewards, and working upgrades. Do not call the milestone complete if any of these are mocked or nonfunctional.
+A complete playable vertical slice with an arena, at least two distinct fighters, animated combat, automatic targeting, health bars, hit reactions, special attacks, currency rewards, and working upgrades. Do not call the milestone complete if any of these are mocked or nonfunctional.
