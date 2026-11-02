@@ -82,7 +82,7 @@ kai:{idle:['idle.png',8],run:['run.png',8],jump:['jump.png',2],fall:['fall.png',
 raika:{idle:['idle.png',4],run:['run.png',8],jump:['jump.png',2],fall:['fall.png',2],attack:['attack.png',4],special:['special.png',4],hurt:['hit.png',3],death:['death.png',7]},
 yurei:{idle:['idle.png',8],run:['run.png',8],runLeft:['run-left.png',8],jump:['jump.png',2],fall:['fall.png',2],attack:['attack.png',5],special:['attack.png',5],hurt:['hit.png',3],death:['death.png',8]},
 goku:{idle:['goku.svg',4],run:['goku.svg',4],jump:['goku.svg',4],fall:['goku.svg',4],attack:['goku.svg',4],special:['goku.svg',4],hurt:['goku.svg',4],death:['goku.svg',4]},
-mira:{idle:['idle-right.png',1],idleLeft:['idle-left.png',1],run:['run-right.png',3],runLeft:['run-left.png',3],special:['cast-right.png',3],specialLeft:['cast-left.png',3],hurt:['idle-right.png',1],death:['idle-right.png',1]}
+mira:{idle:['run-right.png',3],idleLeft:['run-left.png',3],run:['run-right.png',3],runLeft:['run-left.png',3],special:['cast-right.png',3],specialLeft:['cast-left.png',3],hurt:['run-right.png',3],death:['run-right.png',3]}
 };
 const spriteCache={};
 function getSprite(type,anim){
@@ -138,11 +138,10 @@ function syncSpriteFrame(f,dt){
  const sheet=getSprite(f.type,key),isLoop=key==='idle'||key==='idleLeft'||key==='run'||key==='runLeft',fps=(key==='idle'||key==='idleLeft')?8:(isLoop?12:17);
  const raw=Math.floor(f.animClock*fps);
  if(f.type==='mira'&&(key==='run'||key==='runLeft')){
-  // Build the cycle only from frames that actually contain visible pixels.
-  // Some source directions have transparent cells; never display one as a pose.
-  const visible=sheet.bounds?sheet.bounds.map((b,i)=>b&&b.visible&&b.w>=12&&b.h>=24&&b.w*b.h>=300?i:-1).filter(i=>i>=0):[0,1,2];
-  const cycle=visible.length>1?visible.concat(visible.slice(1,-1).reverse()):visible;
-  f.frameIndex=cycle.length?cycle[raw%cycle.length]:0;
+  // Priest east/west sheets are three authored 48x64 poses. Use a fixed
+  // ping-pong sequence; alpha-bound heuristics must never discard a pose.
+  const cycle=[0,1,2,1];
+  f.frameIndex=cycle[raw%cycle.length];
  }else f.frameIndex=isLoop?raw%sheet.frames:Math.min(sheet.frames-1,raw);
 }
 
@@ -386,7 +385,7 @@ function drawFighter(f){
   const frameCount=Math.max(1,sheet.frames||1),frame=Math.max(0,Math.min(frameCount-1,f.frameIndex||0));
   const frameW=img.naturalWidth/frameCount,frameH=img.naturalHeight;
   const b=Array.isArray(sheet.bounds)?sheet.bounds[frame]:null;
-  const usableBounds=b&&b.visible!==false&&b.w>0&&b.h>0;
+  const usableBounds=f.type!=='mira'&&b&&b.visible!==false&&b.w>0&&b.h>0;
   const targetHeight=f.type==='goku'?164:(f.type==='raika'?142:(f.type==='yurei'?138:(f.type==='mira'?126:136)));
   const sourceH=f.type==='mira'?frameH:(usableBounds?b.h:frameH);
   const scale=targetHeight/Math.max(1,sourceH);
