@@ -155,7 +155,7 @@ function attack(f,t,dt){const s=stats(TYPES.find(x=>x.id===f.type));let distance
 if(f.cooldown<=0&&distance<104&&f.energy<65){f.state='attack';f.attackTime=SPRITE_SHEETS[f.type].attack[1]/14;f.cooldown=1/s.rate;f.x+=f.face*17;const dmg=s.damage*(.85+Math.random()*.3);if(Math.random()<.13){addEffect((f.x+t.x)/2,FLOOR-80,'#f9d17b','burst',16);hurt(t,dmg*1.8,f.face,f);log('<b>'+killerName(f)+'</b> landed a critical strike!')}else{addEffect((f.x+t.x)/2,FLOOR-75,f.team?'#ff7184':'#68dcff','slash',8);hurt(t,dmg,f.face)}}
 else if(f.cooldown<=0&&distance<290&&f.energy>=65){f.state='special';f.attackTime=SPRITE_SHEETS[f.type].special[1]/13;f.cooldown=2.3/s.rate;f.energy-=65;effects.push({x:f.x+f.face*30,y:FLOOR-75,vx:f.face*410,vy:0,life:.7,max:.7,color:TYPES.find(x=>x.id===f.type).palette.aura,kind:'projectile',size:13,owner:f.id,team:f.team,damage:s.damage*2.35});addEffect(f.x+f.face*20,FLOOR-75,TYPES.find(x=>x.id===f.type).palette.aura,'burst',12);log('<b>'+killerName(f)+'</b> unleashed an energy strike!')}
 }
-function update(dt){if(state.paused)return;dt*=state.speed;for(const f of fighters){if(f.ko){f.respawn-=dt;syncSpriteFrame(f,dt);if(f.respawn<=0){f.ko=false;f.hp=f.maxHp;f.x=f.team?770:190;f.state='idle';f.animName='';f.animClock=0;f.cooldown=.8;addEffect(f.x,FLOOR-45,TYPES.find(x=>x.id===f.type).palette.aura,'burst',18)}continue}
+function update(dt){if(state.paused)return;dt*=state.speed;for(const f of fighters){if(f.ko){f.respawn-=dt;syncSpriteFrame(f,dt);if(f.respawn<=0){f.ko=false;f.hp=f.maxHp;f.x=f.team?770:190;f.face=f.team?-1:1;f.vx=0;f.state='idle';f.animName='';f.animClock=0;f.cooldown=.8;addEffect(f.x,FLOOR-45,TYPES.find(x=>x.id===f.type).palette.aura,'burst',18)}continue}
 f.anim+=dt;f.hitFlash=Math.max(0,f.hitFlash-dt);f.attackTime=Math.max(0,f.attackTime-dt);if(f.attackTime<=0&&(f.state==='attack'||f.state==='special'))f.state='idle';if(f.state==='hurt'){f.timer-=dt;if(f.timer<=0)f.state='idle';}
 const t=targetFor(f);if(!t){f.state='idle';f.vx=0;syncSpriteFrame(f,dt);continue}faceOpponent(f,t);const dist=Math.abs(t.x-f.x);
 if(f.state==='hurt'||f.state==='attack'||f.state==='special'){syncSpriteFrame(f,dt);continue}
@@ -210,10 +210,11 @@ function drawFighter(f){
   const targetHeight=f.type==='raika'?142:(f.type==='yurei'?138:136),scale=targetHeight/Math.max(1,base);
   const dw=b.w*scale,dh=b.h*scale;
   ctx.save();ctx.translate(f.x,FLOOR);
-  // The standard fighter sheets are authored facing right. Mirror them only
-  // when the opponent is to the fighter's left. Yurei's dedicated runLeft strip
-  // already faces left, so it must never be mirrored a second time.
-  const mirror=key==='runLeft'?false:f.face<0;
+  // Fighters are assigned a permanent side when recruited: Azure spawns left
+  // and Crimson spawns right. The standard sheets face right, so mirror the
+  // right-side roster to face inward. Yurei's runLeft strip already faces left.
+  // f.face remains the live opponent-facing/movement direction for combat.
+  const mirror=key==='runLeft'?false:f.team===1;
   ctx.scale(mirror?-1:1,1);ctx.imageSmoothingEnabled=false;
   // Trim transparent sprite-sheet padding and pin each frame's visible feet to the dojo floor.
   ctx.drawImage(img,frame*frameW+b.x,b.y,b.w,b.h,-dw/2,-dh,dw,dh);
