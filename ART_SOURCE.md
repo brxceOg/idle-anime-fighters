@@ -8,7 +8,13 @@ A high-energy, classic 2D anime fighting-game look strongly informed by MUGEN pr
 - Track every external pack in `ASSET_CREDITS.md`, including author, source URL, license/terms, attribution, and modifications.
 - A public repository can redistribute only assets whose license or permission allows it. Personal/private play does not automatically authorize publishing copyrighted sprite files in a public repo.
 - If a desired pack cannot be redistributed, keep it local or private and do not commit it publicly.
-- Original project artwork is acceptable while the user chooses preferred MUGEN packs; do not use emoji, colored rectangles, stick figures, or generic icons as fighter substitutes.
+- The current prototype integrates three complete CC0 animated fighter packs as the character foundation. The presentation, HUD, arena staging, and combat effects should evoke classic MUGEN arcade fighters. Do not use emoji, colored rectangles, stick figures, or generic icons as fighter substitutes.
+
+## Implemented fighter sprite sets
+- Kai Ren: LuizMelo's Martial Hero animation set (idle, run, jump, fall, two attacks, hit, death).
+- Raika: LuizMelo's Martial Hero 2 animation set (idle, run, jump, fall, two attacks, hit, death).
+- Yurei: LuizMelo's Huntress animation set (idle, run, jump, fall, attack, hit, death).
+- These are game-ready animated sprite strips rather than native MUGEN SFF character archives; the project adapts them to its own combat simulation and uses the MUGEN presentation style around them.
 
 ## Character sprite requirements
 - Prefer complete sprite sheets or frame sequences with transparent backgrounds, consistent frame dimensions, stable feet baselines, and clear frame naming.
