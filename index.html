@@ -181,7 +181,7 @@ function hurt(f,amount,dir,source){
   }else f.defenseCooldown=.28;
  }
  f.hp=Math.max(0,f.hp-amount);
- if(f.state!=='block'){f.state='hurt';f.timer=.3;f.x+=dir*13;}
+ if(f.state!=='block'){f.state='hurt';f.timer=.42;f.knockbackTimer=.32;f.vx=dir*(185+Math.min(95,amount*1.8));}
  f.cooldown=Math.max(f.cooldown,.3);shake=5;flash=.035;
  addEffect(f.x,FLOOR-75,f.state==='block'?'#a8e8ff':'#fff1b5',f.state==='block'?'spark':'burst',f.state==='block'?6:10);
  if(f.hp<=0){
@@ -214,13 +214,40 @@ function attack(f,t,dt){
   log('<b>'+killerName(f)+'</b> unleashed an energy strike!');
  }
 }
+// Resolve body collisions after every fighter has moved. Opposing teams keep
+// their side of the engagement line, preventing sprite overlap and pass-through.
+function resolveFighterSpacing(){
+ const active=fighters.filter(f=>!f.ko);
+ for(let pass=0;pass<3;pass++){
+  for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
+   const a=active[i],b=active[j],opposing=a.team!==b.team;
+   const min=opposing?88:62,delta=b.x-a.x,dist=Math.abs(delta);
+   if(dist>=min)continue;
+   const mid=(a.x+b.x)/2;
+   if(opposing){
+    const azure=a.team===0?a:b,crimson=a.team===1?a:b;
+    azure.x=mid-min/2;crimson.x=mid+min/2;
+   }else{
+    const dir=delta===0?(a.id<b.id?1:-1):Math.sign(delta);
+    a.x-=dir*(min-dist)*.5;b.x+=dir*(min-dist)*.5;
+   }
+   // Cancel movement into the collision plane so they don't immediately
+   // slide through one another on the next simulation frame.
+   if(opposing){a.vx=0;b.vx=0;}
+   else if(Math.sign(a.vx||0)===Math.sign(b.x-a.x))a.vx=0;
+  }
+ }
+ for(const f of active)f.x=Math.max(75,Math.min(885,f.x));
+}
 function update(dt){if(state.paused)return;dt*=state.speed;if(state.bannerTimer>0)state.bannerTimer=Math.max(0,state.bannerTimer-dt);if(state.phase!=='battle'){state.phaseTimer-=dt;if(state.phaseTimer<=0){if(state.phase==='clear'){spawnEnemyWave();state.phase='battle';log('<b>Wave '+state.wave+'</b> begins. Income boost is now '+Math.round((state.incomeBoost-1)*100)+'%.');}else if(state.phase==='reset'){reviveAzureSquad();spawnEnemyWave();state.phase='battle';log('Azure squad is back in the fight.');}save();renderUI();}return;}for(const f of fighters){if(f.ko){f.respawn-=dt;syncSpriteFrame(f,dt);continue}
 f.anim+=dt;f.hitFlash=Math.max(0,f.hitFlash-dt);f.attackTime=Math.max(0,f.attackTime-dt);if(f.attackTime<=0&&(f.state==='attack'||f.state==='special'))f.state='idle';f.defenseCooldown=Math.max(0,f.defenseCooldown-dt);
 f.tacticalCooldown=Math.max(0,f.tacticalCooldown-dt);
 if(f.state==='hurt'||f.state==='block'||f.state==='dodge'||f.state==='retreat'){
  f.timer-=dt;
- if(f.state==='dodge'){f.x+=f.vx*dt;f.vx*=Math.max(0,1-dt*5);}
- else if(f.state==='retreat'){f.x+=f.vx*dt;f.vx*=Math.max(0,1-dt*3);}
+ if(f.state==='hurt'||f.state==='dodge'||f.state==='retreat'){
+  f.x+=f.vx*dt;
+  f.vx*=Math.max(0,1-dt*(f.state==='hurt'?4.2:(f.state==='dodge'?5:3)));
+ }
  if(f.timer<=0){f.state='idle';f.vx=0;}
  f.x=Math.max(75,Math.min(885,f.x));syncSpriteFrame(f,dt);continue;
 }
@@ -254,6 +281,7 @@ if(health<.34&&dist<205&&f.tacticalCooldown<=0&&Math.random()<.72){
  }
 }
 f.x=Math.max(75,Math.min(885,f.x));syncSpriteFrame(f,dt);}
+resolveFighterSpacing();
 for(const e of effects){e.life-=dt;if(e.kind==='projectile'){e.x+=e.vx*dt;e.y+=e.vy*dt;let t=fighters.find(f=>!f.ko&&f.team!==e.team&&Math.abs(f.x-e.x)<26&&Math.abs((FLOOR-75)- (FLOOR-75))<40);if(t){hurt(t,e.damage,Math.sign(e.vx),fighters.find(f=>f.id===e.owner));addEffect(e.x,e.y,e.color,'burst',20);e.life=0}}else{e.x+=e.vx*dt;e.y+=e.vy*dt;e.vx*=.94;e.vy+=180*dt}}
 effects=effects.filter(e=>e.life>0);shake=Math.max(0,shake-dt*28);flash=Math.max(0,flash-dt);const blueAlive=fighters.some(f=>f.team===0&&!f.ko),redAlive=fighters.some(f=>f.team===1&&!f.ko);if(state.owned.length&&!blueAlive){state.phase='reset';state.phaseTimer=3;state.wave=1;state.incomeStreak=0;state.incomeBoost=1;showBanner('SQUAD DOWN · INCOME BOOST RESET','#ff7184',2.8);log('<b>Azure squad wiped out.</b> Wave clear income boost reset. Regrouping…');save();}else if(state.owned.length&&!redAlive){const cleared=state.wave;state.incomeStreak++;state.incomeBoost=Math.min(1.8,1+state.incomeStreak*.08);state.wave++;state.phase='clear';state.phaseTimer=2.4;showBanner('WAVE '+cleared+' CLEARED · INCOME +'+Math.round((state.incomeBoost-1)*100)+'%','#8ce8ff',2.5);log('<b>Wave '+cleared+' cleared!</b> Income boost increased to '+Math.round((state.incomeBoost-1)*100)+'%.');save();}if(Math.random()<.015)renderUI(false)}
 function rounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill()}
