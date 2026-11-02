@@ -82,16 +82,33 @@ const spriteCache={};
 function getSprite(type,anim){
  const def=SPRITE_SHEETS[type][anim]||SPRITE_SHEETS[type].idle,key=type+':'+anim;
  if(!spriteCache[key]){
-  const image=new Image(),sheet={image,frames:def[1]};
-  image.onload=()=>{const t=TYPES.find(x=>x.id===type);document.querySelectorAll('[data-portrait="'+type+'"]').forEach(c=>drawPortrait(c.getContext('2d'),t));};
+  const image=new Image(),sheet={image,frames:def[1],bounds:null};
+  image.onload=()=>{sheet.bounds=scanSpriteFrames(image,sheet.frames);const t=TYPES.find(x=>x.id===type);document.querySelectorAll('[data-portrait="'+type+'"]').forEach(c=>drawPortrait(c.getContext('2d'),t));};
   image.src='./assets/fighters/'+type+'/'+def[0];spriteCache[key]=sheet;
  }
  return spriteCache[key];
 }
+function scanSpriteFrames(image,frames){
+ const frameWidth=Math.floor(image.width/frames),height=image.height,off=document.createElement('canvas');
+ off.width=image.width;off.height=height;
+ const scan=off.getContext('2d',{willReadFrequently:true});scan.drawImage(image,0,0);
+ const pixels=scan.getImageData(0,0,image.width,height).data,bounds=[];
+ for(let frame=0;frame<frames;frame++){
+  let minX=frameWidth,minY=height,maxX=-1,maxY=-1;
+  const x0=frame*frameWidth;
+  for(let y=0;y<height;y++)for(let x=0;x<frameWidth;x++){
+   if(pixels[((y*image.width+x0+x)*4)+3]>12){
+    if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
+   }
+  }
+  bounds.push(maxX<0?{x:0,y:0,w:frameWidth,h:height}:{x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1});
+ }
+ return bounds;
+}
 function animationKey(f){
  if(f.ko)return 'death';
  if(f.state==='hurt')return 'hurt';
- if(f.state==='walk')return f.type==='yurei'&&f.face<0?'runLeft':'run';
+ if(f.state==='walk')return 'run';
  if(f.state==='attack')return 'attack';
  if(f.state==='special')return 'special';
  if(f.state==='jump')return 'jump';
@@ -102,9 +119,9 @@ function syncSpriteFrame(f,dt){
  const key=animationKey(f);
  if(f.animName!==key){f.animName=key;f.animClock=0;f.frameIndex=0;}
  else f.animClock+=dt;
- const sheet=getSprite(f.type,key),fps=key==='idle'?8:(key==='run'||key==='runLeft'?12:17);
+ const sheet=getSprite(f.type,key),fps=key==='idle'?8:(key==='run'?12:17);
  const raw=Math.floor(f.animClock*fps);
- f.frameIndex=(key==='idle'||key==='run'||key==='runLeft')?raw%sheet.frames:Math.min(sheet.frames-1,raw);
+ f.frameIndex=(key==='idle'||key==='run')?raw%sheet.frames:Math.min(sheet.frames-1,raw);
 }
 
 const TYPES=[
@@ -182,10 +199,14 @@ function drawFighter(f){
  const type=TYPES.find(t=>t.id===f.type),p=type.palette,key=animationKey(f),sheet=getSprite(f.type,key),img=sheet.image;
  ctx.save();ctx.globalAlpha=.34;ctx.fillStyle='#050914';ctx.beginPath();ctx.ellipse(f.x,FLOOR+1,f.type==='raika'?38:32,8,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
  if(f.state==='special'&&!f.ko){ctx.save();ctx.translate(f.x,FLOOR-86);const pulse=.7+Math.sin(f.anim*23)*.18;const aura=ctx.createRadialGradient(0,0,12,0,0,60*pulse);aura.addColorStop(0,p.aura+'88');aura.addColorStop(.5,p.aura+'33');aura.addColorStop(1,p.aura+'00');ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,60*pulse,0,Math.PI*2);ctx.fill();ctx.strokeStyle=p.aura;ctx.globalAlpha=.75;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,43*pulse,f.anim*5,f.anim*5+Math.PI*1.5);ctx.stroke();ctx.restore();}
- if(img.complete&&img.naturalWidth){
-  const frameW=img.width/sheet.frames,frame=Math.min(sheet.frames-1,f.frameIndex||0),scale=f.type==='raika'?.88:f.type==='yurei'?1.12:.86,dw=frameW*scale,dh=img.height*scale;
-  ctx.save();ctx.translate(f.x,FLOOR);if(f.face<0&&key!=='runLeft')ctx.scale(-1,1);ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(img,frame*frameW,0,frameW,img.height,-dw/2,-dh,dw,dh);
+ if(img.complete&&img.naturalWidth&&sheet.bounds){
+  const frame=Math.min(sheet.frames-1,f.frameIndex||0),frameW=img.width/sheet.frames,b=sheet.bounds[frame];
+  const idle=getSprite(f.type,'idle'),base=idle.bounds&&idle.bounds[0]?idle.bounds[0].h:b.h;
+  const targetHeight=f.type==='raika'?142:(f.type==='yurei'?138:136),scale=targetHeight/Math.max(1,base);
+  const dw=b.w*scale,dh=b.h*scale;
+  ctx.save();ctx.translate(f.x,FLOOR);ctx.scale(f.face<0?-1:1,1);ctx.imageSmoothingEnabled=false;
+  // Trim transparent sprite-sheet padding and pin each frame's visible feet to the dojo floor.
+  ctx.drawImage(img,frame*frameW+b.x,b.y,b.w,b.h,-dw/2,-dh,dw,dh);
   ctx.restore();
  }
  if(!f.ko){
@@ -233,9 +254,9 @@ document.querySelectorAll('[data-portrait]').forEach(c=>{let t=TYPES.find(x=>x.i
 
 function drawPortrait(g,t){
  if(!g||!t)return;g.clearRect(0,0,80,86);g.imageSmoothingEnabled=false;
- const s=getSprite(t.id,'idle'),img=s.image;if(!img.complete||!img.naturalWidth)return;
- const fw=img.width/s.frames,scale=Math.min(.92,70/img.height),dw=fw*scale,dh=img.height*scale;
- g.drawImage(img,0,0,fw,img.height,(80-dw)/2,84-dh,dw,dh);
+ const s=getSprite(t.id,'idle'),img=s.image;if(!img.complete||!img.naturalWidth||!s.bounds)return;
+ const b=s.bounds[0],scale=76/Math.max(1,b.h),dw=b.w*scale,dh=b.h*scale;
+ g.drawImage(img,b.x,b.y,b.w,b.h,(80-dw)/2,84-dh,dw,dh);
 }
 
 $('pause').addEventListener('click',()=>{state.paused=!state.paused;$('pause').textContent=state.paused?'▶ Resume':'Ⅱ Pause';$('battle-status').textContent=state.paused?'Combat paused':'Combat resumed'});
