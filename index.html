@@ -58,7 +58,7 @@ function update(dt){if(state.paused)return;dt*=state.speed;for(const f of fighte
 f.anim+=dt;f.hitFlash=Math.max(0,f.hitFlash-dt);f.attackTime=Math.max(0,f.attackTime-dt);if(f.attackTime<=0&&(f.state==='attack'||f.state==='special'))f.state='idle';if(f.state==='hurt'){f.timer-=dt;if(f.timer<=0)f.state='idle';}
 const t=targetFor(f);if(!t){f.state='idle';f.vx=0;continue}f.face=t.x>f.x?1:-1;const dist=Math.abs(t.x-f.x);
 if(f.state==='hurt'||f.state==='attack'||f.state==='special')continue;
-if(dist>180){f.state='walk';let pace=stats(TYPES.find(x=>x.id===f.type)).speed;f.vx=f.face*pace;f.x+=f.vx*dt}else{f.vx=0;f.state='idle';attack(f,t,dt)}
+if(dist>180||(dist>104&&f.energy<65)){f.state='walk';let pace=stats(TYPES.find(x=>x.id===f.type)).speed;f.vx=f.face*pace;f.x+=f.vx*dt}else{f.vx=0;f.state='idle';attack(f,t,dt)}
 f.x=Math.max(75,Math.min(885,f.x));}
 for(const e of effects){e.life-=dt;if(e.kind==='projectile'){e.x+=e.vx*dt;e.y+=e.vy*dt;let t=fighters.find(f=>!f.ko&&f.team!==e.team&&Math.abs(f.x-e.x)<26&&Math.abs((FLOOR-75)- (FLOOR-75))<40);if(t){hurt(t,e.damage,Math.sign(e.vx),fighters.find(f=>f.id===e.owner));addEffect(e.x,e.y,e.color,'burst',20);e.life=0}}else{e.x+=e.vx*dt;e.y+=e.vy*dt;e.vx*=.94;e.vy+=180*dt}}
 effects=effects.filter(e=>e.life>0);shake=Math.max(0,shake-dt*28);flash=Math.max(0,flash-dt);if(Math.random()<.015)renderUI(false)}
