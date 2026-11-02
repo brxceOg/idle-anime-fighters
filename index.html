@@ -390,7 +390,7 @@ function drawFighter(f){
   // pose replace Mira's body: use the matching authored walk pose for that
   // frame, while keeping the real cast frames wherever they contain pixels.
   let renderImage=img,renderFrames=frameCount,renderFrame=frame;
-  if(miraCast&&(!img.complete||!img.naturalWidth||!img.naturalHeight||(Array.isArray(sheet.bounds)&&(!b||b.visible===false||b.w<=0||b.h<=0)))){
+  if(miraCast&&(!img.complete||!img.naturalWidth||!img.naturalHeight||(!Array.isArray(sheet.bounds)||!b||b.visible===false||b.w<=0||b.h<=0))){
    const fallback=getSprite('mira',key==='specialLeft'?'runLeft':'run');
    if(fallback.image.complete&&fallback.image.naturalWidth>0&&fallback.image.naturalHeight>0){
     renderImage=fallback.image;renderFrames=fallback.frames||3;renderFrame=Math.min(renderFrames-1,frame);
