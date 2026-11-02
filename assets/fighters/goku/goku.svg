@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="160" viewBox="0 0 512 160">
+<defs>
+ <linearGradient id="orange" x2="0" y2="1"><stop stop-color="#ff9b36"/><stop offset="1" stop-color="#d94b16"/></linearGradient>
+ <linearGradient id="skin" x2="0" y2="1"><stop stop-color="#ffe0b5"/><stop offset="1" stop-color="#c9845c"/></linearGradient>
+</defs>
+<g id="goku" stroke="#241a20" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+<!-- boots and legs -->
+<path d="M43 119 L39 143 Q48 151 67 146 L78 128 L71 116Z" fill="#254b9b"/><path d="M76 118 L82 142 Q94 151 110 143 L105 119Z" fill="#254b9b"/>
+<path d="M36 140 Q52 135 70 144 L68 153 L34 153 Q28 148 36 140Z" fill="#26335c"/><path d="M83 139 Q99 134 116 140 L123 151 L88 153Z" fill="#26335c"/>
+<!-- gi legs / torso -->
+<path d="M43 82 L110 80 L108 126 Q93 137 74 125 L65 112 L52 131 L34 124Z" fill="url(#orange)"/>
+<path d="M51 82 L88 85 L80 111 L64 125 L47 112Z" fill="#f8a13d"/>
+<path d="M42 82 Q57 73 82 78 L108 84 L105 102 Q75 95 42 103Z" fill="#f07a22"/>
+<path d="M40 96 L107 98" stroke="#f6c25b" stroke-width="4"/>
+<!-- belt -->
+<path d="M43 103 Q76 111 108 103 L107 111 Q75 120 42 111Z" fill="#1f4f9c"/>
+<!-- neck / arms -->
+<path d="M68 61 L89 61 L91 80 L68 81Z" fill="url(#skin)"/>
+<path d="M50 75 Q37 74 30 90 L21 110 Q26 119 37 115 L52 95Z" fill="url(#orange)"/>
+<path d="M99 75 Q115 73 124 88 L133 105 Q130 117 119 115 L103 95Z" fill="url(#orange)"/>
+<path d="M21 106 Q29 100 39 109 L36 120 Q26 124 20 116Z" fill="url(#skin)"/><path d="M120 106 Q130 100 137 108 L134 120 Q124 124 118 116Z" fill="url(#skin)"/>
+<!-- face -->
+<path d="M56 27 Q78 13 101 29 L103 59 Q97 76 79 79 Q58 73 53 57Z" fill="url(#skin)"/>
+<path d="M57 46 Q65 41 72 47 M86 47 Q94 41 100 46" fill="none" stroke="#291c1c" stroke-width="3"/>
+<path d="M64 53 L74 55 M88 55 L98 53" stroke="#1b2437" stroke-width="4"/>
+<path d="M78 60 L82 61" stroke="#8e493b"/><path d="M70 68 Q80 73 91 67" fill="none" stroke="#8e3c35" stroke-width="2"/>
+<!-- iconic spiky black hair -->
+<path d="M54 43 L43 28 L56 31 L49 8 L69 25 L75 2 L86 24 L104 7 L100 31 L119 24 L103 47 L96 34 L87 40 L78 31 L68 42 L59 35Z" fill="#17151d"/>
+<path d="M59 31 L52 17 M75 24 L76 7 M92 27 L105 13" fill="none" stroke="#51424a" stroke-width="2"/>
+<!-- chest folds -->
+<path d="M59 86 L72 96 L66 109 M91 86 L83 99 L95 109" fill="none" stroke="#a73e1b" stroke-width="2"/>
+<path d="M53 83 L42 90 M101 83 L113 91" stroke="#ffd077" stroke-width="3"/>
+</g>
+<g transform="translate(128 0) translate(0 1)"><use href="#goku"/></g>
+<g transform="translate(256 0) translate(0 -2)"><use href="#goku"/></g>
+<g transform="translate(384 0) translate(0 1)"><use href="#goku"/></g>
+</svg>
