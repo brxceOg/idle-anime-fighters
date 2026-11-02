@@ -220,21 +220,17 @@ function resolveFighterSpacing(){
  const active=fighters.filter(f=>!f.ko);
  for(let pass=0;pass<3;pass++){
   for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
-   const a=active[i],b=active[j],opposing=a.team!==b.team;
-   const min=opposing?88:62,delta=b.x-a.x,dist=Math.abs(delta);
+   const a=active[i],b=active[j];
+   // Allies are intentionally non-solid: they can pass through one another
+   // so every squad member can reach an opponent and get attacks in.
+   if(a.team===b.team)continue;
+   const min=88,delta=b.x-a.x,dist=Math.abs(delta);
    if(dist>=min)continue;
    const mid=(a.x+b.x)/2;
-   if(opposing){
-    const azure=a.team===0?a:b,crimson=a.team===1?a:b;
-    azure.x=mid-min/2;crimson.x=mid+min/2;
-   }else{
-    const dir=delta===0?(a.id<b.id?1:-1):Math.sign(delta);
-    a.x-=dir*(min-dist)*.5;b.x+=dir*(min-dist)*.5;
-   }
-   // Cancel movement into the collision plane so they don't immediately
-   // slide through one another on the next simulation frame.
-   if(opposing){a.vx=0;b.vx=0;}
-   else if(Math.sign(a.vx||0)===Math.sign(b.x-a.x))a.vx=0;
+   const azure=a.team===0?a:b,crimson=a.team===1?a:b;
+   azure.x=mid-min/2;crimson.x=mid+min/2;
+   // Opponents remain solid and cannot phase through each other.
+   a.vx=0;b.vx=0;
   }
  }
  for(const f of active)f.x=Math.max(75,Math.min(885,f.x));
