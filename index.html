@@ -409,7 +409,7 @@ function drawFighter(f){
   // Keep each authored sheet's native facing consistent with combat direction.
   const nativeFacing=(key==='runLeft'||key==='idleLeft'||key==='specialLeft'||f.type==='raika')?-1:1;
   ctx.scale(f.face!==nativeFacing?-1:1,1);ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(renderImage,renderFrame*renderFrameW,0,renderFrameW,renderFrameH,-dw/2,-dh,dw,dh);
+  ctx.drawImage(renderImage,sx,sy,sw,sh,-dw/2,-dh,dw,dh);
   ctx.restore();
  }
  if(!f.ko){
