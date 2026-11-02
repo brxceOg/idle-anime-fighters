@@ -16,6 +16,10 @@ A high-energy, classic 2D anime fighting-game look strongly informed by MUGEN pr
 - Yurei: LuizMelo's Huntress animation set (idle, run, jump, fall, attack, hit, death).
 - These are game-ready animated sprite strips rather than native MUGEN SFF character archives; the project adapts them to its own combat simulation and uses the MUGEN presentation style around them.
 
+## Mira — support healer
+- Mira uses the Priest v1.1 sprite pack by Svetlana Kushnariova (Cabbit) and Jordan Irwin (AntumDeluge), with the violet robe overlay. The pack supplies idle and walking frames in four directions; the game uses authored east/west frames for side-view movement.
+- Casting-light overlays, healing projectile and impact particles, support AI, and healing logic are custom project additions. The original pack does not contain combat or healing animations.
+
 ## Character sprite requirements
 - Prefer complete sprite sheets or frame sequences with transparent backgrounds, consistent frame dimensions, stable feet baselines, and clear frame naming.
 - Include idle, walk/run, light/heavy attack, special, hurt, knockback, and defeat states where the source pack provides them.

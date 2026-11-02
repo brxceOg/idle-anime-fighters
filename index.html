@@ -217,6 +217,7 @@ function healAlly(target,amount){
  save();renderUI(false);
 }
 function updateMira(f,dt){
+ if(f.state==='special'&&f.attackTime>0){f.vx=0;return;}
  f.cooldown=Math.max(0,f.cooldown-dt);
  const enemy=targetFor(f),ally=lowestHealthAlly(f);
  if(ally&&f.cooldown<=0){
