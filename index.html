@@ -240,7 +240,7 @@ if(health<.34&&dist<205&&f.tacticalCooldown<=0&&Math.random()<.72){
  // Keep the full attack animation and recovery; do not cancel it to chase.
 }else{
  const ideal=type.style==='heavy'?88:(type.style==='swift'?112:100);
- if(dist>ideal+48){
+ if(dist>ideal+12){
   f.state='walk';f.vx=f.face*pace*(dist>260?1.05:.78);f.x+=f.vx*dt;
  }else if(dist<58){
   // Make a little room instead of overlapping opponents.
