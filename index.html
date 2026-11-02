@@ -107,7 +107,7 @@ function scanSpriteFrames(image,frames){
     if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
    }
   }
-  bounds.push(maxX<0?{x:0,y:0,w:frameWidth,h:height}:{x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1});
+  bounds.push(maxX<0?{x:0,y:0,w:frameWidth,h:height,visible:false}:{x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1,visible:true});
  }
  return bounds;
 }
@@ -131,8 +131,11 @@ function syncSpriteFrame(f,dt){
  const sheet=getSprite(f.type,key),isLoop=key==='idle'||key==='idleLeft'||key==='run'||key==='runLeft',fps=(key==='idle'||key==='idleLeft')?8:(isLoop?12:17);
  const raw=Math.floor(f.animClock*fps);
  if(f.type==='mira'&&(key==='run'||key==='runLeft')){
-  // Ping-pong the three authored poses to avoid the abrupt 3 -> 1 jump.
-  f.frameIndex=[0,1,2,1][raw%4];
+  // Build the cycle only from frames that actually contain visible pixels.
+  // Some source directions have transparent cells; never display one as a pose.
+  const visible=sheet.bounds?sheet.bounds.map((b,i)=>b&&b.visible?i:-1).filter(i=>i>=0):[0,1,2];
+  const cycle=visible.length>1?visible.concat(visible.slice(1,-1).reverse()):visible;
+  f.frameIndex=cycle.length?cycle[raw%cycle.length]:0;
  }else f.frameIndex=isLoop?raw%sheet.frames:Math.min(sheet.frames-1,raw);
 }
 
@@ -388,11 +391,13 @@ function drawFighter(f){
   ctx.scale(mirror?-1:1,1);ctx.imageSmoothingEnabled=false;
   // Trim transparent sprite-sheet padding and pin each frame's visible feet to the dojo floor.
   if(f.type==='mira'){
-   // Mira's three-frame walk/cast strips use a fixed 48x64 cell. Draw the
-   // whole cell at one stable scale so transparent margins never cause a
-   // frame to collapse, jump in size, or appear to vanish between steps.
-   const cellH=img.height,cellScale=targetHeight/64,cellW=frameW*cellScale;
-   ctx.drawImage(img,frame*frameW,0,frameW,cellH,-cellW/2,-cellH*cellScale,cellW,cellH*cellScale);
+   // Trim transparent padding, but keep a shared scale and floor baseline
+   // across all authored poses so the robe never jumps or disappears.
+   const safe=b&&b.visible?b:(sheet.bounds||[]).find(v=>v&&v.visible)||{x:0,y:0,w:frameW,h:img.height};
+   const idleBounds=idle.bounds&&idle.bounds[0]&&idle.bounds[0].visible?idle.bounds[0]:safe;
+   const miraScale=targetHeight/Math.max(1,idleBounds.h);
+   const miraW=safe.w*miraScale,miraH=safe.h*miraScale;
+   ctx.drawImage(img,frame*frameW+safe.x,safe.y,safe.w,safe.h,-miraW/2,-miraH,miraW,miraH);
   }else ctx.drawImage(img,frame*frameW+b.x,b.y,b.w,b.h,-dw/2,-dh,dw,dh);
   ctx.restore();
  }
@@ -445,7 +450,15 @@ document.querySelectorAll('[data-portrait]').forEach(c=>{let t=TYPES.find(x=>x.i
 
 function drawPortrait(g,t){
  if(!g||!t)return;g.clearRect(0,0,80,86);g.imageSmoothingEnabled=false;
- const s=getSprite(t.id,'idle'),img=s.image;if(!img.complete||!img.naturalWidth||!s.bounds)return;
+ const s=getSprite(t.id,'idle'),img=s.image;if(!img.complete||!img.naturalWidth)return;
+ if(t.id==='mira'){
+  // Mira's portrait uses the full authored 48x64 idle cell directly. It does
+  // not depend on the per-frame alpha scanner used by the other sprite packs.
+  const scale=76/64,w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+  g.drawImage(img,0,0,img.naturalWidth,img.naturalHeight,(80-w)/2,84-h,w,h);
+  return;
+ }
+ if(!s.bounds)return;
  const b=s.bounds[0],scale=76/Math.max(1,b.h),dw=b.w*scale,dh=b.h*scale;
  g.drawImage(img,b.x,b.y,b.w,b.h,(80-dw)/2,84-dh,dw,dh);
 }
