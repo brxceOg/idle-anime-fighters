@@ -408,7 +408,13 @@ function drawFighter(f){
   const renderBounds=renderImage===img?b:(Array.isArray(getSprite('mira',key==='specialLeft'?'runLeft':'run').bounds)?getSprite('mira',key==='specialLeft'?'runLeft':'run').bounds[renderFrame]:null);
   const usableBounds=f.type!=='mira'&&renderBounds&&renderBounds.visible!==false&&renderBounds.w>0&&renderBounds.h>0;
   const targetHeight=f.type==='goku'?164:(f.type==='raika'?142:(f.type==='yurei'?138:(f.type==='mira'?126:136)));
-  const sourceH=(key==='death'||f.type==='mira')?renderFrameH:(usableBounds?renderBounds.h:renderFrameH);
+  // Death poses must use the same pixel-to-world scale as the fighter's
+  // upright idle pose. Keep alpha-cropping the death frame, but never derive
+  // scale from the fallen frame's shorter transparent bounds or full cell.
+  const idleReference=getSprite(f.type,'idle'),idleBounds=Array.isArray(idleReference.bounds)?idleReference.bounds:null;
+  const idleVisibleHeights=idleBounds?idleBounds.filter(v=>v&&v.visible!==false&&v.h>0).map(v=>v.h):[];
+  const uprightSourceH=f.type==='mira'?renderFrameH:(idleVisibleHeights.length?Math.max(...idleVisibleHeights):(idleReference.image.naturalHeight||renderFrameH));
+  const sourceH=key==='death'?uprightSourceH:(f.type==='mira'?renderFrameH:(usableBounds?renderBounds.h:renderFrameH));
   const scale=targetHeight/Math.max(1,sourceH);
   const sx=usableBounds?renderFrame*renderFrameW+renderBounds.x:renderFrame*renderFrameW,sy=usableBounds?renderBounds.y:0;
   const sw=usableBounds?renderBounds.w:renderFrameW,sh=usableBounds?renderBounds.h:renderFrameH;
