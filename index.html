@@ -273,7 +273,7 @@ function attack(f,t,dt){
   if(Math.random()<.1){addEffect((f.x+t.x)/2,FLOOR-80,'#f9d17b','burst',14);hurt(t,dmg*1.65,f.face,f);log('<b>'+killerName(f)+'</b> landed a critical strike!');}
   else{addEffect((f.x+t.x)/2,FLOOR-75,f.team?'#ff7184':'#68dcff','slash',8);hurt(t,dmg,f.face,f);}
  }else if(distance<330&&f.energy>=65){
-  f.state='special';f.attackTime=SPRITE_SHEETS[f.type].special[1]/13+.16;
+  f.state='special';f.attackTime=SPRITE_SHEETS[f.type].special[1]/(f.type==='goku'?18:13)+.16;
   f.cooldown=2.6/s.rate;f.energy-=65;
   effects.push({x:f.x+f.face*30,y:FLOOR-75,vx:f.face*410,vy:0,life:.7,max:.7,color:type.palette.aura,kind:'projectile',size:13,owner:f.id,team:f.team,damage:s.damage*2.1});
   addEffect(f.x+f.face*20,FLOOR-75,type.palette.aura,'burst',12);
