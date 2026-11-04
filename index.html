@@ -143,6 +143,7 @@ function animationKey(f){
 }
 function syncSpriteFrame(f,dt){
  const key=animationKey(f);
+ if(f.type==='goku')f.gokuRunClock=(f.gokuRunClock||0)+dt;
  if(f.animName!==key){f.animName=key;f.animClock=0;f.frameIndex=0;}
  else f.animClock+=dt;
  const sheet=getSprite(f.type,key),isLoop=key==='idle'||key==='idleLeft'||key==='run'||key==='runLeft'||(f.type==='goku'&&key==='runBack');
@@ -151,7 +152,6 @@ function syncSpriteFrame(f,dt){
  // state changes (spacing corrections, brief idle decisions, or a facing flip)
  // must not send the next sprint back to frame zero.
  if(f.type==='goku'&&key==='run'){
-  f.gokuRunClock=(f.gokuRunClock||0)+dt;
   f.frameIndex=Math.floor(f.gokuRunClock*fps)%sheet.frames;
   return;
  }
@@ -405,7 +405,20 @@ function drawFighter(f){
  if(f.state==='block'&&!f.ko){ctx.save();ctx.strokeStyle='#a8e8ff';ctx.globalAlpha=.8;ctx.lineWidth=4;ctx.beginPath();ctx.arc(f.x+f.face*18,FLOOR-82,27,-1.15,1.15);ctx.stroke();ctx.globalAlpha=.22;ctx.fillStyle='#a8e8ff';ctx.beginPath();ctx.arc(f.x+f.face*18,FLOOR-82,25,-1.15,1.15);ctx.fill();ctx.restore();}
  if(f.state==='special'&&!f.ko){ctx.save();ctx.translate(f.x,FLOOR-86);const pulse=.7+Math.sin(f.anim*23)*.18;const aura=ctx.createRadialGradient(0,0,12,0,0,60*pulse);aura.addColorStop(0,p.aura+'88');aura.addColorStop(.5,p.aura+'33');aura.addColorStop(1,p.aura+'00');ctx.fillStyle=aura;ctx.beginPath();ctx.arc(0,0,60*pulse,0,Math.PI*2);ctx.fill();ctx.strokeStyle=p.aura;ctx.globalAlpha=.75;ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,43*pulse,f.anim*5,f.anim*5+Math.PI*1.5);ctx.stroke();ctx.restore();}
  if((img.complete&&img.naturalWidth>0&&img.naturalHeight>0)||(f.type==='mira'&&(key==='special'||key==='specialLeft'))){
-  const frameCount=Math.max(1,sheet.frames||1),frame=Math.max(0,Math.min(frameCount-1,f.frameIndex||0));
+  const frameCount=Math.max(1,sheet.frames||1);
+  let frame=Math.max(0,Math.min(frameCount-1,f.frameIndex||0));
+  // A few converted Goku strip cells can be fully transparent. Never draw an
+  // empty cell (which looks like a random animation dropout); hold the nearest
+  // authored visible pose for that tick instead.
+  if(f.type==='goku'&&Array.isArray(sheet.bounds)&&sheet.bounds[frame]&&sheet.bounds[frame].visible===false){
+   let replacement=-1;
+   for(let step=1;step<frameCount;step++){
+    const prev=(frame-step+frameCount)%frameCount,next=(frame+step)%frameCount;
+    if(sheet.bounds[prev]&&sheet.bounds[prev].visible!==false){replacement=prev;break;}
+    if(sheet.bounds[next]&&sheet.bounds[next].visible!==false){replacement=next;break;}
+   }
+   if(replacement>=0)frame=replacement;
+  }
   const frameW=img.naturalWidth/frameCount,frameH=img.naturalHeight;
   const b=Array.isArray(sheet.bounds)?sheet.bounds[frame]:null;
   const miraCast=f.type==='mira'&&(key==='special'||key==='specialLeft');
