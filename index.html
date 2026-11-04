@@ -81,7 +81,7 @@ const SPRITE_SHEETS={
 kai:{idle:['idle.png',8],run:['run.png',8],jump:['jump.png',2],fall:['fall.png',2],attack:['attack.png',6],special:['special.png',6],hurt:['hit.png',4],death:['death.png',6]},
 raika:{idle:['idle.png',4],run:['run.png',8],jump:['jump.png',2],fall:['fall.png',2],attack:['attack.png',4],special:['special.png',4],hurt:['hit.png',3],death:['death.png',7]},
 yurei:{idle:['idle.png',8],run:['run.png',8],runLeft:['run-left.png',8],jump:['jump.png',2],fall:['fall.png',2],attack:['attack.png',5],special:['attack.png',5],hurt:['hit.png',3],death:['death.png',8]},
-goku:{idle:['goku.svg',4],run:['goku.svg',4],jump:['goku.svg',4],fall:['goku.svg',4],attack:['goku.svg',4],special:['goku.svg',4],hurt:['goku.svg',4],death:['goku.svg',4]},
+goku:{idle:['idle.png',18],run:['run.png',9],runBack:['runBack.png',7],jump:['jump.png',4],fall:['fall.png',5],land:['land.png',5],attack:['attack.png',4],attack2:['attack2.png',6],special:['special.png',28],hurt:['attack2.png',6],death:['fall.png',5]},
 mira:{idle:['run-right.png',3],idleLeft:['run-left.png',3],run:['run-right.png',3],runLeft:['run-left.png',3],special:['cast-right.png',3],specialLeft:['cast-left.png',3],hurt:['run-right.png',3],death:['run-right.png',3]}
 };
 const spriteCache={};
@@ -121,6 +121,7 @@ function scanSpriteFrames(image,frames){
 function animationKey(f){
  if(f.ko)return 'death';
  if(f.state==='hurt')return f.type==='mira'?(f.face<0?'idleLeft':'idle'):'hurt';
+ if(f.type==='goku'&&f.state==='walk'&&f.face<0)return 'runBack';
  if(f.state==='dodge'||f.state==='retreat')return (f.type==='yurei'||f.type==='mira')&&f.face<0?'runLeft':'run';
  if(f.state==='block')return f.type==='mira'&&f.face<0?'idleLeft':'idle';
  // Mira and Yurei use authored left-facing strips instead of mirroring their side-view poses.
@@ -135,7 +136,8 @@ function syncSpriteFrame(f,dt){
  const key=animationKey(f);
  if(f.animName!==key){f.animName=key;f.animClock=0;f.frameIndex=0;}
  else f.animClock+=dt;
- const sheet=getSprite(f.type,key),isLoop=key==='idle'||key==='idleLeft'||key==='run'||key==='runLeft',fps=(key==='idle'||key==='idleLeft')?8:(isLoop?12:17);
+ const sheet=getSprite(f.type,key),isLoop=key==='idle'||key==='idleLeft'||key==='run'||key==='runLeft'||(f.type==='goku'&&key==='runBack');
+ const fps=f.type==='goku'?(key==='idle'?10:(isLoop?12:(key==='special'?18:17))):((key==='idle'||key==='idleLeft')?8:(isLoop?12:17));
  const raw=Math.floor(f.animClock*fps);
  if(f.type==='mira'&&(key==='run'||key==='runLeft')){
   // Priest east/west sheets are three authored 48x64 poses. Use a fixed
@@ -407,7 +409,7 @@ function drawFighter(f){
   const dw=sw*scale,dh=sh*scale;
   ctx.save();ctx.translate(f.x,FLOOR);
   // Keep each authored sheet's native facing consistent with combat direction.
-  const nativeFacing=(key==='runLeft'||key==='idleLeft'||key==='specialLeft'||f.type==='raika')?-1:1;
+  const nativeFacing=(key==='runLeft'||key==='idleLeft'||key==='specialLeft'||key==='runBack'||f.type==='raika')?-1:1;
   ctx.scale(f.face!==nativeFacing?-1:1,1);ctx.imageSmoothingEnabled=false;
   ctx.drawImage(renderImage,sx,sy,sw,sh,-dw/2,-dh,dw,dh);
   ctx.restore();
