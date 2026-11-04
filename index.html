@@ -143,7 +143,7 @@ function syncSpriteFrame(f,dt){
  if(f.animName!==key){f.animName=key;f.animClock=0;f.frameIndex=0;}
  else f.animClock+=dt;
  const sheet=getSprite(f.type,key),isLoop=key==='idle'||key==='idleLeft'||key==='run'||key==='runLeft'||(f.type==='goku'&&key==='runBack');
- const fps=f.type==='goku'?(key==='idle'?10:(isLoop?12:(key==='special'?18:17))):((key==='idle'||key==='idleLeft')?8:(isLoop?12:17));
+ const fps=f.type==='goku'?(key==='idle'?10:(isLoop?12:(key==='special'?18:14))):((key==='idle'||key==='idleLeft')?8:(isLoop?12:17));
  const raw=Math.floor(f.animClock*fps);
  if(f.type==='mira'&&(key==='run'||key==='runLeft')){
   // Priest east/west sheets are three authored 48x64 poses. Use a fixed
@@ -330,7 +330,10 @@ if(health<.34&&dist<205&&f.tacticalCooldown<=0&&Math.random()<.72){
  // Keep the full attack animation and recovery; do not cancel it to chase.
 }else{
  const ideal=type.style==='heavy'?88:(type.style==='swift'?112:100);
- if(dist>ideal+12){
+ // Add a small hysteresis band so spacing corrections don't repeatedly
+ // switch Goku between run and idle, restarting his 9-frame run cycle.
+ const shouldAdvance=dist>ideal+12||(f.state==='walk'&&dist>ideal-12);
+ if(shouldAdvance){
   f.state='walk';f.vx=f.face*pace*(dist>260?1.05:.78);f.x+=f.vx*dt;
  }else if(dist<58){
   // Make a little room instead of overlapping opponents.
@@ -406,7 +409,7 @@ function drawFighter(f){
   }
   const renderFrameW=renderImage.naturalWidth/Math.max(1,renderFrames),renderFrameH=renderImage.naturalHeight;
   const renderBounds=renderImage===img?b:(Array.isArray(getSprite('mira',key==='specialLeft'?'runLeft':'run').bounds)?getSprite('mira',key==='specialLeft'?'runLeft':'run').bounds[renderFrame]:null);
-  const usableBounds=f.type!=='mira'&&renderBounds&&renderBounds.visible!==false&&renderBounds.w>0&&renderBounds.h>0;
+  const usableBounds=f.type!=='mira'&&f.type!=='goku'&&renderBounds&&renderBounds.visible!==false&&renderBounds.w>0&&renderBounds.h>0;
   const targetHeight=f.type==='goku'?164:(f.type==='raika'?142:(f.type==='yurei'?138:(f.type==='mira'?126:136)));
   // Death poses must use the same pixel-to-world scale as the fighter's
   // upright idle pose. Keep alpha-cropping the death frame, but never derive
@@ -414,7 +417,7 @@ function drawFighter(f){
   const idleReference=getSprite(f.type,'idle'),idleBounds=Array.isArray(idleReference.bounds)?idleReference.bounds:null;
   const idleVisibleHeights=idleBounds?idleBounds.filter(v=>v&&v.visible!==false&&v.h>0).map(v=>v.h):[];
   const uprightSourceH=f.type==='mira'?renderFrameH:(idleVisibleHeights.length?Math.max(...idleVisibleHeights):(idleReference.image.naturalHeight||renderFrameH));
-  const sourceH=key==='death'?uprightSourceH:(f.type==='mira'?renderFrameH:(usableBounds?renderBounds.h:renderFrameH));
+  const sourceH=(key==='death'||f.type==='goku')?uprightSourceH:(f.type==='mira'?renderFrameH:(usableBounds?renderBounds.h:renderFrameH));
   const scale=targetHeight/Math.max(1,sourceH);
   const sx=usableBounds?renderFrame*renderFrameW+renderBounds.x:renderFrame*renderFrameW,sy=usableBounds?renderBounds.y:0;
   const sw=usableBounds?renderBounds.w:renderFrameW,sh=usableBounds?renderBounds.h:renderFrameH;
