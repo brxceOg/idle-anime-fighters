@@ -408,7 +408,7 @@ function drawFighter(f){
   const renderBounds=renderImage===img?b:(Array.isArray(getSprite('mira',key==='specialLeft'?'runLeft':'run').bounds)?getSprite('mira',key==='specialLeft'?'runLeft':'run').bounds[renderFrame]:null);
   const usableBounds=f.type!=='mira'&&renderBounds&&renderBounds.visible!==false&&renderBounds.w>0&&renderBounds.h>0;
   const targetHeight=f.type==='goku'?164:(f.type==='raika'?142:(f.type==='yurei'?138:(f.type==='mira'?126:136)));
-  const sourceH=f.type==='mira'?renderFrameH:(usableBounds?renderBounds.h:renderFrameH);
+  const sourceH=(key==='death'||f.type==='mira')?renderFrameH:(usableBounds?renderBounds.h:renderFrameH);
   const scale=targetHeight/Math.max(1,sourceH);
   const sx=usableBounds?renderFrame*renderFrameW+renderBounds.x:renderFrame*renderFrameW,sy=usableBounds?renderBounds.y:0;
   const sw=usableBounds?renderBounds.w:renderFrameW,sh=usableBounds?renderBounds.h:renderFrameH;
