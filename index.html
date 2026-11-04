@@ -127,7 +127,10 @@ function scanSpriteFrames(image,frames){
 function animationKey(f){
  if(f.ko)return 'death';
  if(f.state==='hurt')return f.type==='mira'?(f.face<0?'idleLeft':'idle'):'hurt';
- if(f.type==='goku'&&f.state==='walk'&&f.face<0)return 'runBack';
+ // Goku's run strip is authored as a single continuous loop. Keep that same
+ // strip in either direction and mirror it at draw time; swapping to runBack
+ // on a facing flip used to reset the cycle halfway through a sprint.
+ if(f.type==='goku'&&(f.state==='walk'||f.state==='dodge'||f.state==='retreat'))return 'run';
  if(f.state==='dodge'||f.state==='retreat')return (f.type==='yurei'||f.type==='mira')&&f.face<0?'runLeft':'run';
  if(f.state==='block')return f.type==='mira'&&f.face<0?'idleLeft':'idle';
  // Mira and Yurei use authored left-facing strips instead of mirroring their side-view poses.
@@ -144,6 +147,14 @@ function syncSpriteFrame(f,dt){
  else f.animClock+=dt;
  const sheet=getSprite(f.type,key),isLoop=key==='idle'||key==='idleLeft'||key==='run'||key==='runLeft'||(f.type==='goku'&&key==='runBack');
  const fps=f.type==='goku'?(key==='idle'?10:(isLoop?12:(key==='special'?18:14))):((key==='idle'||key==='idleLeft')?8:(isLoop?12:17));
+ // Keep Goku's sprint phase on its own continuously advancing clock. Short
+ // state changes (spacing corrections, brief idle decisions, or a facing flip)
+ // must not send the next sprint back to frame zero.
+ if(f.type==='goku'&&key==='run'){
+  f.gokuRunClock=(f.gokuRunClock||0)+dt;
+  f.frameIndex=Math.floor(f.gokuRunClock*fps)%sheet.frames;
+  return;
+ }
  const raw=Math.floor(f.animClock*fps);
  if(f.type==='mira'&&(key==='run'||key==='runLeft')){
   // Priest east/west sheets are three authored 48x64 poses. Use a fixed
@@ -332,7 +343,8 @@ if(health<.34&&dist<205&&f.tacticalCooldown<=0&&Math.random()<.72){
  const ideal=type.style==='heavy'?88:(type.style==='swift'?112:100);
  // Add a small hysteresis band so spacing corrections don't repeatedly
  // switch Goku between run and idle, restarting his 9-frame run cycle.
- const shouldAdvance=dist>ideal+12||(f.state==='walk'&&dist>ideal-12);
+ const movementHysteresis=f.type==='goku'?30:12;
+ const shouldAdvance=dist>ideal+12||(f.state==='walk'&&dist>ideal-movementHysteresis);
  if(shouldAdvance){
   f.state='walk';f.vx=f.face*pace*(dist>260?1.05:.78);f.x+=f.vx*dt;
  }else if(dist<58){
